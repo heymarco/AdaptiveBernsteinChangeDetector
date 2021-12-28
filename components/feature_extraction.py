@@ -7,6 +7,11 @@ import torch.optim
 class AutoEncoder(nn.Module):
 
     def __init__(self, input_size: int, eta: float):
+        """
+        A simple single layer autoencoder
+        :param input_size: The size of the input
+        :param eta: The encoding factor. Hidden layer size is eta * input_size
+        """
         super(AutoEncoder, self).__init__()
         self.eta = eta
         self.input_size = input_size
@@ -21,6 +26,12 @@ class AutoEncoder(nn.Module):
         return x
 
     def update(self, window, epochs: int = 1):
+        """
+        Update the autoencoder on the given window
+        :param window: The data
+        :param epochs: The number of epochs
+        :return:
+        """
         if len(window) == 0:
             return
         self.train()
@@ -33,6 +44,10 @@ class AutoEncoder(nn.Module):
             self.optimizer.step()
 
     def new_tuple(self, x):
+        """
+        :param x: Input instance
+        :return: A new tuple containing, RMSE, reconstruction, and original
+        """
         tensor = torch.from_numpy(x).float()
         self.eval()
         with torch.no_grad():
