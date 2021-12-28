@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 
 def plot_results(x, drift_scores, real_changes, change_points, detection_points, xlims = False):
-    if len(vlines_real):
+    if len(real_changes):
         for line in real_changes:
             plt.axvline(line, c="black", lw=3, label="true change")
     if len(change_points):
