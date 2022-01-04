@@ -1,3 +1,4 @@
+import numpy as np
 from skmultiflow.drift_detection.base_drift_detector import BaseDriftDetector
 
 from components.feature_extraction import AutoEncoder
@@ -21,6 +22,7 @@ class HCD(BaseDriftDetector):
         self.warm_start = warm_start
         self.bound = bound
         self.last_training_point = None
+        self._last_loss = np.nan
         super(HCD, self).__init__()
 
     def add_element(self, input_value):
@@ -37,18 +39,21 @@ class HCD(BaseDriftDetector):
             return
         new_tuple = self.ae.new_tuple(input_value)
         self.window.grow(new_tuple)  # add new tuple to window
+        self._last_loss = self.window.last_loss()
         self.in_concept_change, detection_point = self.window.has_change()
         if self.in_concept_change:
             self.last_detection_point = detection_point
             self.delay = len(self.window) - self.window._last_split_index
-            self.last_change_point = self.window._last_split_index
+            self.last_change_point = self.last_detection_point - self.delay
             #TODO: evaluate region
             #TODO: evaluate magnitude
             self.window.shrink()  # forget outdated data
             self.ae.update(self.window.data(), epochs=10)  # update autoencoder after change
-            self.window.reset()  # forget losses of 'old' autoencoder to not interfere with future change detection
         else:
             self.ae.update(self.window.safe_data())  # update autoencoder on data that is safe to train on
 
     def warm_start_finished(self):
         return self.seen_elements > self.warm_start
+
+    def last_loss(self):
+        return self._last_loss

@@ -1,4 +1,5 @@
 import numpy as np
+from components.std import PairwiseVariance
 
 
 def epsilon_cut_hoeffding(card_w1, card_w2, delta: float):
@@ -45,6 +46,7 @@ class AdaptiveWindow:
         self._best_split_candidate = 0
         self.bound = bound
         self.prev_safe_data_index = 0
+        self.variance_tracker = PairwiseVariance()
 
     def __len__(self):
         return len(self.w)
@@ -55,7 +57,9 @@ class AdaptiveWindow:
         :param new_item: Tuple (loss, reconstruction, original)
         :return: nothing
         """
-        self.w.append(new_item)
+        loss, data = new_item[0], (new_item[1], new_item[2])
+        self.w.append(data)
+        self.variance_tracker.update(loss)
         self.n_seen_items += 1
 
     def has_change(self):
@@ -76,17 +80,8 @@ class AdaptiveWindow:
         Drop all data up to the last change point
         :return:
         """
-        self.w = self.w[self._last_split_index-1:]
-
-    def reset(self):
-        """
-        Sets loss in window to nan, so that it is not considered during change detection.
-        Use this function after you updated the autoencoder after a change.
-        :return:
-        """
-        self.w = [
-            (np.nan, w[1], w[2]) for w in self.w
-        ]
+        self.w = self.w[self._last_split_index:]
+        self.variance_tracker.reset()
 
     def data(self):
         """
@@ -111,28 +106,25 @@ class AdaptiveWindow:
         """
         return np.array([self.safe_data()[-1]])
 
-    def _losses(self):
-        return np.array([item[0] for item in self.w if not np.isnan(item[0])])
-
     def _hoeffding_cd(self):
         """
         Change detection using the Hoeffding method
         :return: change detected, change point
         """
-        losses = self._losses()
-        num_nans = len(self.w) - len(losses)
         min_num_data = 2
-        if len(self.w) - num_nans <= min_num_data:
+        min_window_size = int(min_num_data / 2.0)
+        if len(self.variance_tracker) <= min_num_data:
             return False, None
-        losses = self._losses()
-        possible_windows = [(losses[:i], losses[i:])
-                            for i in range(int(min_num_data / 2), len(losses) - int(min_num_data / 2), 1)]
-        epsilon = np.array([np.mean(w2) - np.mean(w1) for (w1, w2) in possible_windows])
-        eps_cut = np.array([epsilon_cut_hoeffding(len(w1), len(w2), self.delta) for (w1, w2) in possible_windows])
+        cut_indices = [i for i in range(min_window_size, len(self.variance_tracker) - min_window_size, 1)]
+        aggregates = [self.variance_tracker.pairwise_aggregate(i) for i in cut_indices]
+        pairwise_counts = [aggregate.n() for aggregate in aggregates]
+        pairwise_means = [aggregate.mean() for aggregate in aggregates]
+        epsilon = np.array([m2 - m1 for (m1, m2) in pairwise_means])
+        eps_cut = np.array([epsilon_cut_hoeffding(c1, c2, self.delta) for (c1, c2) in pairwise_counts])
         possible_change_points = epsilon > eps_cut
         has_change = np.any(possible_change_points)
         if has_change:
-            split_index = next(i + 1 for i in range(len(possible_change_points)) if possible_change_points[i])
+            split_index = next(i for i in range(len(possible_change_points)) if possible_change_points[i]) + min_window_size
             self._last_split_index = split_index
             return has_change, self.n_seen_items
         else:
@@ -143,20 +135,20 @@ class AdaptiveWindow:
         Change detection using the Chernoff method
         :return: change detected, change point
         """
-        losses = self._losses()
-        num_nans = len(self.w) - len(losses)
         min_num_data = 60
-        if len(self.w) - num_nans <= min_num_data:
+        min_window_size = int(min_num_data / 2.0)
+        if len(self.variance_tracker) <= min_num_data:
             return False, None
-        possible_windows = [(losses[:i], losses[i:])
-                            for i in range(int(min_num_data / 2), len(losses) - int(min_num_data / 2), 1)]
-        epsilon = np.array([np.mean(w2) - np.mean(w1) for (w1, w2) in possible_windows])
-        sigma = np.array([(np.std(w1, ddof=1), np.std(w2, ddof=1)) for (w1, w2) in possible_windows])
+        cut_indices = [i for i in range(min_window_size, len(self.variance_tracker) - min_window_size, 1)]
+        aggregates = [self.variance_tracker.pairwise_aggregate(i) for i in cut_indices]
+        sigma = [aggregate.std() for aggregate in aggregates]
+        pairwise_means = [aggregate.mean() for aggregate in aggregates]
+        epsilon = np.array([m2 - m1 for (m1, m2) in pairwise_means])
         eps_cut = np.array([epsilon_cut_chernoff(s1, s2, self.delta) for (s1, s2) in sigma])
         possible_change_points = epsilon > eps_cut
         has_change = np.any(possible_change_points)
         if has_change:
-            split_index = next(i + 1 for i in range(len(possible_change_points)) if possible_change_points[i]) + 30
+            split_index = next(i for i in range(len(possible_change_points)) if possible_change_points[i]) + min_window_size
             self._last_split_index = split_index
             return has_change, self.n_seen_items
         else:
@@ -167,22 +159,22 @@ class AdaptiveWindow:
         Change detection using the Bernstein method
         :return: change detected, change point
         """
-        losses = self._losses()
-        num_nans = len(self.w) - len(losses)
         min_num_data = 60
-        if len(self.w) - num_nans <= min_num_data:
+        min_window_size = int(min_num_data / 2.0)
+        if len(self.variance_tracker) <= min_num_data:
             return False, None
-        possible_windows = [(losses[:i], losses[i:])
-                            for i in range(int(min_num_data / 2), len(losses) - int(min_num_data / 2), 1)]
-        epsilon = np.array([np.mean(w2) - np.mean(w1) for (w1, w2) in possible_windows])
-        sigma = np.array([(np.std(w1, ddof=1), np.std(w2, ddof=1)) for (w1, w2) in possible_windows])
-        n1 = np.array([len(w) for w, _ in possible_windows])
-        n2 = np.array([len(w) for _, w in possible_windows])
-        delta_empirical = p_bernstein(np.abs(epsilon), n1=n1, n2=n2, sigma1=sigma[:, 0], sigma2=sigma[:, 1])
+        cut_indices = [i for i in range(min_window_size, len(self.variance_tracker) - min_window_size, 1)]
+        aggregates = [self.variance_tracker.pairwise_aggregate(i) for i in cut_indices]
+        sigma = np.array([aggregate.std() for aggregate in aggregates])
+        pairwise_means = [aggregate.mean() for aggregate in aggregates]
+        pairwise_n = np.array([aggregate.n() for aggregate in aggregates])
+        epsilon = np.array([m2 - m1 for (m1, m2) in pairwise_means])
+        delta_empirical = p_bernstein(np.abs(epsilon), n1=pairwise_n[:, 0], n2=pairwise_n[:, 1],
+                                      sigma1=sigma[:, 0], sigma2=sigma[:, 1])
         possible_change_points = delta_empirical < self.delta
         has_change = np.any(possible_change_points)
         if has_change:
-            split_index = next(i + 1 for i in range(len(possible_change_points)) if possible_change_points[i]) + 30
+            split_index = next(i for i in range(len(possible_change_points)) if possible_change_points[i]) + min_window_size
             self._last_split_index = split_index
             return has_change, self.n_seen_items
         else:
@@ -193,16 +185,17 @@ class AdaptiveWindow:
         Safe data using Hoeffding method
         :return:
         """
-        losses = self._losses()
-        num_nans = len(self.w) - len(losses)
         min_num_data = 2
-        if len(self.w) - num_nans <= min_num_data:
-            return self.data()[-1]
-        possible_windows = [(losses[:i], losses[i:])
-                            for i in range(int(min_num_data / 2), len(losses) - int(min_num_data / 2), 1)]
-        epsilon = np.array([np.mean(w2) - np.mean(w1) for (w1, w2) in possible_windows])
-        delta_empirical = [p_hoeffding(eps, len(w1), len(w2)) for eps, (w1, w2) in zip(epsilon, possible_windows)]
-        most_probable_split_index = np.argmin(delta_empirical) + num_nans
+        min_window_size = int(min_num_data / 2.0)
+        if len(self.variance_tracker) <= min_num_data:
+            return self.data()
+        cut_indices = [i for i in range(min_window_size, len(self.variance_tracker) - min_window_size, 1)]
+        aggregates = [self.variance_tracker.pairwise_aggregate(i) for i in cut_indices]
+        pairwise_counts = [aggregate.n() for aggregate in aggregates]
+        pairwise_means = [aggregate.mean() for aggregate in aggregates]
+        epsilon = np.array([m2 - m1 for (m1, m2) in pairwise_means])
+        delta_empirical = [p_hoeffding(eps, n1, n2) for eps, (n1, n2) in zip(epsilon, pairwise_counts)]
+        most_probable_split_index = np.argmin(delta_empirical) + min_window_size
         train_data = np.array([item[-1] for item in self.w[self.prev_safe_data_index:most_probable_split_index]])
         self.prev_safe_data_index = max(self.prev_safe_data_index, most_probable_split_index)
         print(len(self.w), most_probable_split_index + self._last_split_index, len(train_data), np.min(delta_empirical))
@@ -213,19 +206,19 @@ class AdaptiveWindow:
         Safe data using Chernoff method
         :return:
         """
-        losses = self._losses()
-        num_nans = len(self.w) - len(losses)
         min_num_data = 60
-        if len(self.w) - num_nans <= min_num_data:
-            return self.data()[-1]
-        possible_windows = [(losses[:i], losses[i:])
-                            for i in range(int(min_num_data / 2), len(losses) - int(min_num_data / 2), 1)]
-        epsilon = np.array([np.mean(w2) - np.mean(w1) for (w1, w2) in possible_windows])
+        min_window_size = int(min_num_data / 2.0)
+        if len(self.variance_tracker) <= min_num_data:
+            return self.data()
+        cut_indices = [i for i in range(min_window_size, len(self.variance_tracker) - min_window_size, 1)]
+        aggregates = [self.variance_tracker.pairwise_aggregate(i) for i in cut_indices]
+        sigma = [aggregate.std() for aggregate in aggregates]
+        pairwise_means = [aggregate.mean() for aggregate in aggregates]
+        epsilon = np.array([m2 - m1 for (m1, m2) in pairwise_means])
         epsilon[epsilon < 0.0] = 0.0
-        sigma = np.array([(np.std(w1, ddof=1), np.std(w2, ddof=1)) for (w1, w2) in possible_windows])
         delta_empirical = np.asarray([p_chernoff(eps, s1, s2)
                                       for eps, (s1, s2) in zip(epsilon, sigma)])
-        most_probable_split_index = np.argmin(delta_empirical) + 30 + num_nans
+        most_probable_split_index = np.argmin(delta_empirical) + min_window_size
         train_data = np.array([item[-1] for item in self.w[self.prev_safe_data_index:most_probable_split_index]])
         print(len(self.w), most_probable_split_index + self._last_split_index, len(train_data), np.min(delta_empirical))
         self.prev_safe_data_index = max(self.prev_safe_data_index, most_probable_split_index)
@@ -233,20 +226,25 @@ class AdaptiveWindow:
 
     def _safe_data_bernstein(self):
         """Safe data using Bernstein method"""
-        losses = self._losses()
-        num_nans = len(self.w) - len(losses)
         min_num_data = 60
-        if len(self.w) - num_nans <= min_num_data:
-            return self.data()[-1]
-        possible_windows = [(losses[:i], losses[i:])
-                            for i in range(int(min_num_data / 2), len(losses) - int(min_num_data / 2), 1)]
-        epsilon = np.array([np.mean(w2) - np.mean(w1) for (w1, w2) in possible_windows])
-        sigma = np.array([(np.std(w1, ddof=1), np.std(w2, ddof=1)) for (w1, w2) in possible_windows])
-        n1 = np.array([len(w) for w, _ in possible_windows])
-        n2 = np.array([len(w) for _, w in possible_windows])
-        delta_empirical = p_bernstein(np.abs(epsilon), n1=n1, n2=n2, sigma1=sigma[:, 0], sigma2=sigma[:, 1])
-        most_probable_split_index = np.argmin(delta_empirical) + 30 + num_nans
+        min_window_size = int(min_num_data / 2.0)
+        if len(self.variance_tracker) <= min_num_data:
+            return self.data()
+        cut_indices = [i for i in range(min_window_size, len(self.variance_tracker) - min_window_size, 1)]
+        aggregates = [self.variance_tracker.pairwise_aggregate(i) for i in cut_indices]
+        sigma = np.array([aggregate.std() for aggregate in aggregates])
+        pairwise_means = [aggregate.mean() for aggregate in aggregates]
+        pairwise_n = np.array([aggregate.n() for aggregate in aggregates])
+        epsilon = np.array([m2 - m1 for (m1, m2) in pairwise_means])
+        delta_empirical = p_bernstein(np.abs(epsilon), n1=pairwise_n[:, 0], n2=pairwise_n[:, 1],
+                                      sigma1=sigma[:, 0], sigma2=sigma[:, 1])
+        most_probable_split_index = np.argmin(delta_empirical) + min_window_size
         train_data = np.array([item[-1] for item in self.w[self.prev_safe_data_index:most_probable_split_index]])
         print(len(self.w), most_probable_split_index + self._last_split_index, len(train_data), np.min(delta_empirical))
         self.prev_safe_data_index = max(self.prev_safe_data_index, most_probable_split_index)
         return train_data
+
+    def last_loss(self):
+        p_aggregate = self.variance_tracker.pairwise_aggregate(len(self.variance_tracker.aggregates) - 1)
+        _, loss = p_aggregate.mean()
+        return loss
