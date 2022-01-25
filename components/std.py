@@ -44,8 +44,9 @@ class PairwiseAggregate:
 
 class PairwiseVariance:
 
-    def __init__(self):
+    def __init__(self, max_size: int):
         self.aggregates = []
+        self.max_size = max_size
 
     def __len__(self):
         return len(self.aggregates)
@@ -63,6 +64,8 @@ class PairwiseVariance:
         m2 = last_aggregate.m2 + delta * delta2
         new_aggregate = Aggregate(n=count, mean=new_mean, m2=m2)
         self.aggregates.append(new_aggregate)
+        if len(self.aggregates) > self.max_size:
+            self.aggregates = self.aggregates[-self.max_size:]
 
     def reset(self):
         self.aggregates = []

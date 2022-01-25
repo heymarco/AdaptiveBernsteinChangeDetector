@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim
 
+from components.experiment_logging import logger
+
 
 class AutoEncoder(nn.Module):
 
@@ -53,5 +55,6 @@ class AutoEncoder(nn.Module):
         with torch.no_grad():
             pred = self.forward(tensor)
             loss = F.mse_loss(pred, tensor)
-            return np.sqrt(loss.item()), pred.numpy()[0], x
+            logger.track_feature_extraction(loss.item())
+            return loss.item(), pred.numpy()[0], x
 
