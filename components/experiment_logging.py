@@ -9,15 +9,26 @@ class ExperimentLogger:
 
     def __init__(self):
         self._data = []
-        self._columns = ["data-index", "time", "loss", "safe-index", "p", "change-point", "is-change", "delay", "w1", "w2", "sigma1", "sigma2", "eps"]
+        self._columns = ["rep", "approach", "parameters", "dataset", "data-index", "time", "metric", "safe-index", "p",
+                         "change-point", "is-change", "delay", "w1", "w2", "sigma1", "sigma2", "eps", "accuracy"]
         self._current_row = [np.nan for _ in range(len(self._columns))]
+
+    def track_rep(self, rep: int):
+        self._track_value(rep, "rep")
+
+    def track_approach_information(self, name, parameters):
+        self._track_value(name, "approach")
+        self._track_value(parameters, "parameters")
+
+    def track_dataset_name(self, name):
+        self._track_value(name, "dataset")
 
     def track_time(self):
         current_time = time.perf_counter_ns()
         self._track_value(current_time, "time")
 
-    def track_loss(self, loss):
-        self._track_value(loss, "loss")
+    def track_metric(self, metric):
+        self._track_value(metric, "metric")
 
     def track_index(self, index):
         self._track_value(index, "data-index")
@@ -52,13 +63,19 @@ class ExperimentLogger:
     def track_eps(self, eps):
         self._track_value(eps, "eps")
 
+    def track_accuracy(self, acc):
+        self._track_value(acc, "accuracy")
+
     def finalize_round(self):
         self._data.append(self._current_row)
         self._current_row = [np.nan for _ in range(len(self._columns))]
 
-    def save(self, path=os.path.join(os.getcwd(), "results", "result.csv")):
+    def save(self, path=os.path.join(os.getcwd(), "results", "result.csv"), append: bool = False):
         df = pd.DataFrame(self._data, columns=self._columns)
-        df.to_csv(path, index=False)
+        if not append:
+            df.to_csv(path, index=False)
+        else:
+            df.to_csv(path, mode='a', header=not os.path.exists(path))
 
     def track_windowing(self, n1, n2, s1, s2, eps, p, safe_index):
         self.track_w1(n1)
@@ -70,7 +87,7 @@ class ExperimentLogger:
         self.track_safe_index(safe_index)
 
     def track_feature_extraction(self, loss):
-        self.track_loss(loss)
+        self.track_metric(loss)
 
     def _track_value(self, newval, id):
         self._current_row[self._index_of(id)] = newval

@@ -10,9 +10,10 @@ def plot_loss(path_to_result = os.path.join(os.getcwd(), "..", "results", "resul
     df = pd.read_csv(path_to_result)
     df["w"] = df["w1"] + df["w2"]
     changes = [i for i, is_change in enumerate(df["is-change"]) if is_change]
-    detected_changes = [i for i, change in enumerate(df["change-point"]) if change]
+    detected_changes = [i for i, change in enumerate(df["change-point"].fillna(False)) if change]
     change_points = [i - df["delay"][i] for i in detected_changes]
-    df = df.rolling(window=100).mean()
+    window_size = 100
+    df = df.rolling(window=window_size).mean()
     for line in changes:
         plt.axvline(line, c="black", alpha=0.3)
     for line in detected_changes:
@@ -30,4 +31,8 @@ def plot_loss(path_to_result = os.path.join(os.getcwd(), "..", "results", "resul
 
 
 if __name__ == '__main__':
-    plot_loss()
+    path_to_result = os.path.join(os.getcwd(), "..", "results", "result.csv")
+    plot_loss(path_to_result)
+    df = pd.read_csv(path_to_result)
+    print(df["delay"].dropna())
+    print("Average detection delay is {}".format(np.nanmean(df["delay"])))

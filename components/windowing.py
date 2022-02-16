@@ -299,7 +299,7 @@ class AdaptiveWindow:
         if len(self.variance_tracker) <= min_data:
             return
         end_index = len(self.variance_tracker) - start_index
-        if self.split_type == "log":
+        if self.split_type == "exp":
             n_points = end_index - start_index
             indices = []
             i = 0

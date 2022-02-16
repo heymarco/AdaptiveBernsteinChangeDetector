@@ -3,19 +3,19 @@ import os.path
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-from skmultiflow.drift_detection.base_drift_detector import BaseDriftDetector
+
+from detectors import RegionalDriftDetector
 
 from components.feature_extraction import AutoEncoder
 from components.windowing import AdaptiveWindow, p_bernstein
 from components.experiment_logging import logger
 
 
-class HCD(BaseDriftDetector):
-
+class ABCD(RegionalDriftDetector):
     def __init__(self, delta: float,
                  bound: str = "bernstein",
                  update_epochs: int = 20,
-                 split_type: str = "log",
+                 split_type: str = "exp",
                  new_ae: bool = False,
                  encoding_factor: float = 0.7):
         """
@@ -23,6 +23,7 @@ class HCD(BaseDriftDetector):
         :param warm_start: The length of the warm start phase in which we train the AE without detecting changes
         :param bound: The bounding method to use, either 'hoeffding', 'chernoff', or 'bernstein'
         """
+        self.split_type = split_type
         self.delta = delta
         self.new_ae = new_ae
         self.window = AdaptiveWindow(delta=delta, bound=bound, split_type=split_type)
@@ -36,7 +37,13 @@ class HCD(BaseDriftDetector):
         self.drift_dimensions = None
         self.epochs = update_epochs
         self.eta = encoding_factor
-        super(HCD, self).__init__()
+        super(ABCD, self).__init__()
+
+    def name(self) -> str:
+        return "ABCD2" if self.split_type == "exp" else "ABCD"
+
+    def parameter_str(self) -> str:
+        return r"$\delta = {}, E = {}, \eta = {}$".format(self.delta, self.epochs, self.eta)
 
     def pre_train(self, data):
         if self.ae is None:
@@ -72,14 +79,12 @@ class HCD(BaseDriftDetector):
                 self.ae = AutoEncoder(input_size=input_value.shape[-1], eta=self.eta)
             self.pre_train(self.window.data_new())  # update autoencoder after change
             self.window.reset()  # forget outdated data
-        # else:
-        #     self.ae.update(self.window.safe_data())  # update autoencoder on data that is safe to train on
 
-    def last_loss(self):
+    def metric(self):
         return self._last_loss
 
     def find_drift_dimensions(self):
-        data = self.window.data().squeeze(axis=1)
+        data = self.window.data()
         output = self.window.reconstructions()
         error = output - data
         squared_errors = np.power(error, 2)
@@ -97,27 +102,47 @@ class HCD(BaseDriftDetector):
 
     def plot_drift_dimensions(self):
         num_dims = len(self.drift_dimensions)
-        side_length = int(np.sqrt(num_dims))
+        side_length = np.ceil(np.sqrt(num_dims)).astype(int)
         shape = (side_length, side_length)
-        p_matrix = self.drift_dimensions.reshape(shape)
-        fig, axes = plt.subplots(2, 2)
-        axes = axes.flatten()
-        for ax in axes:
+        drift_dims = np.concatenate([self.drift_dimensions, np.ones(shape=side_length**2-num_dims)])
+        p_matrix = drift_dims.reshape(shape)
+        data_matrix_1 = np.concatenate([
+            self.window.data()[self.window._last_split_index - 2].flatten(),
+            np.zeros(shape=side_length ** 2 - num_dims)
+        ]).reshape(shape)
+        data_matrix_2 = np.concatenate([
+            self.window.data()[-1].flatten(),
+            np.zeros(shape=side_length ** 2 - num_dims)
+        ]).reshape(shape)
+        recon_matrix_1 = np.concatenate([
+            self.window.reconstructions()[self.window._last_split_index - 2].flatten(),
+            np.zeros(shape=side_length ** 2 - num_dims)
+        ]).reshape(shape)
+        recon_matrix_2 = np.concatenate([
+            self.window.reconstructions()[-1].flatten(),
+            np.zeros(shape=side_length ** 2 - num_dims)
+        ]).reshape(shape)
+        fig, axes = plt.subplots(2, 3, figsize=(4, 2))
+        for ax in axes.flatten():
             ax.set_aspect("equal", adjustable="box")
         bool_matrix = p_matrix < self.delta
-        image1 = self.window.data()[self.window._last_split_index - 2].flatten().reshape(shape)
-        image2 = self.window.data()[-1].flatten().reshape(shape)
-        sns.heatmap(image1, label="p-value", cmap=sns.color_palette("Greys_r", as_cmap=True),
-                    vmax=1, ax=axes[0])
-        sns.heatmap(image2, label="decision", cmap=sns.color_palette("Greys_r", as_cmap=True),
-                    vmax=1, ax=axes[1])
-        sns.heatmap(p_matrix, label="p-value", cmap=sns.color_palette("Greys_r", as_cmap=True),
-                    vmax=1, ax=axes[2])
+        sns.heatmap(data_matrix_1, cmap=sns.color_palette("Greys_r", as_cmap=True),
+                    vmax=1, ax=axes[0, 0], cbar=False)
+        sns.heatmap(data_matrix_2, cmap=sns.color_palette("Greys_r", as_cmap=True),
+                    vmax=1, ax=axes[1, 0], cbar=False)
+        sns.heatmap(recon_matrix_1, cmap=sns.color_palette("Greys_r", as_cmap=True),
+                    vmax=1, ax=axes[0, 1], cbar=False)
+        sns.heatmap(recon_matrix_2, cmap=sns.color_palette("Greys_r", as_cmap=True),
+                    vmax=1, ax=axes[1, 1], cbar=False)
+        sns.heatmap(p_matrix, cmap=sns.color_palette("Greys_r", as_cmap=True),
+                    vmax=1, ax=axes[0, 2], cbar=False)
         sns.heatmap(bool_matrix, label="decision", cmap=sns.color_palette("Greys_r", as_cmap=True),
-                    vmax=1, ax=axes[3])
-        titles = ["before drift", "after drift", "drift significance", "drift dimensions"]
-        for ax, title in zip(axes, titles):
+                    vmax=1, cbar_kws={"shrink": 0.5})
+        titles = ["conc. 1", "conc. 2", "rec. 1", "rec. 2", "p", "ddims"]
+        for ax, title in zip(axes.flatten(), titles):
             ax.set_title(title)
+            ax.set_xticks([])
+            ax.set_yticks([])
         plt.tight_layout()
         plt.savefig(os.path.join("figures", "drift_dims.pdf"))
         plt.show()

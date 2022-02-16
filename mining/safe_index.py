@@ -8,6 +8,7 @@ import seaborn as sns
 
 def plot_safe_index(path_to_result = os.path.join(os.getcwd(), "..", "results", "result.csv"), save_path = None):
     df = pd.read_csv(path_to_result)
+    df = df.loc[:10000]
     changes = [i for i, is_change in enumerate(df["is-change"]) if is_change]
     detected_changes = [i for i, change in enumerate(df["change-point"]) if change]
     for line in changes:
