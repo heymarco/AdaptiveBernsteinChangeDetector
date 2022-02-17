@@ -17,7 +17,7 @@ if __name__ == '__main__':
     warm_start = 100
     update_epochs = 100
     delta = 0.05
-    stream = RandomOrderMNIST(preprocess=preprocess)
+    stream = LED(preprocess=preprocess, n_per_concept=3000)
     detector = ABCD(delta=delta, bound="bernstein",
                     update_epochs=update_epochs, new_ae=True)
 

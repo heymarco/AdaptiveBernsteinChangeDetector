@@ -6,34 +6,41 @@ from changeds import ChangeStream
 from detectors import DriftDetector
 
 from components.experiment_logging import logger
+from util import new_experiment_dir, new_filepath_in_current_experiment
 
 
 class Experiment:
     def __init__(self,
                  configurations: dict,
                  datasets: list,
-                 reps: int = 1,
-                 target_filename: str = "result.csv"):
-        self.target_path = os.path.join(os.getcwd(), "results", target_filename)
+                 reps: int = 1):
+        self.target_path = new_experiment_dir()
         self.configurations = configurations
         self.datasets = datasets
         self.reps = reps
+        all_configs = []
+        for conf in self.configurations.values():
+            all_configs += conf
+        self.total_runs = len(self.datasets) * len(all_configs)
 
     def run(self, warm_start: int = 100):
-        for dataset in tqdm(self.datasets):
+        i = 1
+        for dataset in self.datasets:
             for algorithm in self.configurations.keys():
                 for config in self.configurations[algorithm]:
                     alg = algorithm(**config)
-                    # print("Run {} with {} on {}".format(alg.name(), alg.parameter_str(), dataset.id()))
+                    print("{}/{}: Run {} with {} on {}".format(i, self.total_runs, alg.name(), alg.parameter_str(), dataset.id()))
                     self.repeat(alg, dataset, warm_start=warm_start)
+                    i += 1
 
     def repeat(self, detector: DriftDetector, stream: ChangeStream, warm_start: int = 100):
         for rep in range(self.reps):
-            self.evaluate_algorithm(detector, stream, rep, warm_start)
+            logger.track_rep(rep)
+            self.evaluate_algorithm(detector, stream, warm_start)
+        logger.save(append=False, path=new_filepath_in_current_experiment())
 
-    def evaluate_algorithm(self, detector: DriftDetector, stream: ChangeStream, rep: int, warm_start: int = 100):
+    def evaluate_algorithm(self, detector: DriftDetector, stream: ChangeStream, warm_start: int = 100):
         stream.restart()
-        logger.track_rep(rep)
         logger.track_approach_information(detector.name(), detector.parameter_str())
         logger.track_dataset_name(stream.id())
 
@@ -42,7 +49,7 @@ class Experiment:
             data = np.array([
                 stream.next_sample()[0]
                 for _ in range(warm_start)
-            ])
+            ]).squeeze(1)
             detector.pre_train(data)
 
         # Execution
@@ -56,4 +63,3 @@ class Experiment:
             logger.track_metric(detector.metric())
             logger.track_delay(detector.delay)
             logger.finalize_round()
-        logger.save(append=True)

@@ -76,6 +76,7 @@ class ExperimentLogger:
             df.to_csv(path, index=False)
         else:
             df.to_csv(path, mode='a', header=not os.path.exists(path))
+        self._reset()
 
     def track_windowing(self, n1, n2, s1, s2, eps, p, safe_index):
         self.track_w1(n1)
@@ -95,6 +96,10 @@ class ExperimentLogger:
     def _index_of(self, id):
         index = next(i for i in range(len(self._columns)) if self._columns[i] == id)
         return index
+
+    def _reset(self):
+        self._current_row = [np.nan for _ in range(len(self._columns))]
+        self._data = []
 
 
 logger = ExperimentLogger()
