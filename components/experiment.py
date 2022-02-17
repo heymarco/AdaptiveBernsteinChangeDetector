@@ -2,8 +2,8 @@ import os
 import numpy as np
 from tqdm import tqdm
 
-from changeds import ChangeStream
-from detectors import DriftDetector
+from changeds import ChangeStream, RegionalChangeStream
+from detectors import DriftDetector, RegionalDriftDetector
 
 from components.experiment_logging import logger
 from util import new_experiment_dir, new_filepath_in_current_experiment
@@ -53,13 +53,25 @@ class Experiment:
             detector.pre_train(data)
 
         # Execution
+        i = 0
+        change_count = 0
         while stream.has_more_samples():
             logger.track_time()
             logger.track_index(stream.sample_idx)
             next_sample, _, is_change = stream.next_sample()
             logger.track_is_change(is_change)
+            if i == 0:
+                logger.track_ndims(next_sample.shape[-1])
+                i += 1
+            if is_change:
+                change_count += 1
             detector.add_element(next_sample)
             logger.track_change_point(detector.detected_change())
             logger.track_metric(detector.metric())
-            logger.track_delay(detector.delay)
+            if detector.detected_change():
+                logger.track_delay(detector.delay)
+                if isinstance(detector, RegionalDriftDetector):
+                    logger.track_dims_found(detector.get_drift_dims())
+                if isinstance(stream, RegionalChangeStream):
+                    logger.track_dims_gt(stream.approximate_change_regions()[change_count - 1])
             logger.finalize_round()

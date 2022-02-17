@@ -65,8 +65,7 @@ class ABCD(RegionalDriftDetector):
         self.in_concept_change, detection_point = self.window.has_change()
         logger.track_change_point(self.in_concept_change)
         if self.in_concept_change:
-            self.find_drift_dimensions()
-            self.plot_drift_dimensions()
+            self._find_drift_dimensions()
             # TODO: evaluate magnitude
 
             # LOGGING
@@ -83,7 +82,7 @@ class ABCD(RegionalDriftDetector):
     def metric(self):
         return self._last_loss
 
-    def find_drift_dimensions(self):
+    def _find_drift_dimensions(self):
         data = self.window.data()
         output = self.window.reconstructions()
         error = output - data
@@ -99,51 +98,11 @@ class ABCD(RegionalDriftDetector):
         n2 = len(window2)
         p = p_bernstein(eps, n1=n1, n2=n2, sigma1=sigma1, sigma2=sigma2)
         self.drift_dimensions = p
+        return p
 
-    def plot_drift_dimensions(self):
-        num_dims = len(self.drift_dimensions)
-        side_length = np.ceil(np.sqrt(num_dims)).astype(int)
-        shape = (side_length, side_length)
-        drift_dims = np.concatenate([self.drift_dimensions, np.ones(shape=side_length**2-num_dims)])
-        p_matrix = drift_dims.reshape(shape)
-        data_matrix_1 = np.concatenate([
-            self.window.data()[self.window._last_split_index - 2].flatten(),
-            np.zeros(shape=side_length ** 2 - num_dims)
-        ]).reshape(shape)
-        data_matrix_2 = np.concatenate([
-            self.window.data()[-1].flatten(),
-            np.zeros(shape=side_length ** 2 - num_dims)
-        ]).reshape(shape)
-        recon_matrix_1 = np.concatenate([
-            self.window.reconstructions()[self.window._last_split_index - 2].flatten(),
-            np.zeros(shape=side_length ** 2 - num_dims)
-        ]).reshape(shape)
-        recon_matrix_2 = np.concatenate([
-            self.window.reconstructions()[-1].flatten(),
-            np.zeros(shape=side_length ** 2 - num_dims)
-        ]).reshape(shape)
-        fig, axes = plt.subplots(2, 3, figsize=(4, 2))
-        for ax in axes.flatten():
-            ax.set_aspect("equal", adjustable="box")
-        bool_matrix = p_matrix < self.delta
-        sns.heatmap(data_matrix_1, cmap=sns.color_palette("Greys_r", as_cmap=True),
-                    vmax=1, ax=axes[0, 0], cbar=False)
-        sns.heatmap(data_matrix_2, cmap=sns.color_palette("Greys_r", as_cmap=True),
-                    vmax=1, ax=axes[1, 0], cbar=False)
-        sns.heatmap(recon_matrix_1, cmap=sns.color_palette("Greys_r", as_cmap=True),
-                    vmax=1, ax=axes[0, 1], cbar=False)
-        sns.heatmap(recon_matrix_2, cmap=sns.color_palette("Greys_r", as_cmap=True),
-                    vmax=1, ax=axes[1, 1], cbar=False)
-        sns.heatmap(p_matrix, cmap=sns.color_palette("Greys_r", as_cmap=True),
-                    vmax=1, ax=axes[0, 2], cbar=False)
-        sns.heatmap(bool_matrix, label="decision", cmap=sns.color_palette("Greys_r", as_cmap=True),
-                    vmax=1, cbar_kws={"shrink": 0.5})
-        titles = ["conc. 1", "conc. 2", "rec. 1", "rec. 2", "p", "ddims"]
-        for ax, title in zip(axes.flatten(), titles):
-            ax.set_title(title)
-            ax.set_xticks([])
-            ax.set_yticks([])
-        plt.tight_layout()
-        plt.savefig(os.path.join("figures", "drift_dims.pdf"))
-        plt.show()
+    def get_drift_dims(self) -> np.ndarray:
+        return np.array([
+            i for i in range(len(self.drift_dimensions)) if self.drift_dimensions[i] < self.delta
+        ])
+
 

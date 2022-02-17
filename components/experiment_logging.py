@@ -10,7 +10,8 @@ class ExperimentLogger:
     def __init__(self):
         self._data = []
         self._columns = ["rep", "approach", "parameters", "dataset", "data-index", "time", "metric", "safe-index", "p",
-                         "change-point", "is-change", "delay", "w1", "w2", "sigma1", "sigma2", "eps", "accuracy"]
+                         "change-point", "is-change", "delay", "w1", "w2", "sigma1", "sigma2", "eps", "accuracy",
+                         "ndims", "dims-gt", "dims-found"]
         self._current_row = [np.nan for _ in range(len(self._columns))]
 
     def track_rep(self, rep: int):
@@ -65,6 +66,15 @@ class ExperimentLogger:
 
     def track_accuracy(self, acc):
         self._track_value(acc, "accuracy")
+
+    def track_ndims(self, ndims):
+        self._track_value(ndims, "ndims")
+
+    def track_dims_gt(self, dims):
+        self._track_value(dims, "dims-gt")
+
+    def track_dims_found(self, dims):
+        self._track_value(dims, "dims-found")
 
     def finalize_round(self):
         self._data.append(self._current_row)

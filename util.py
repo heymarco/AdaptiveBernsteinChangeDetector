@@ -56,3 +56,7 @@ def move_legend_below_graph(axes, ncol: int, title: str):
     fig = plt.gcf()
     fig.subplots_adjust(bottom=0.2)
     plt.tight_layout()
+
+
+def str_to_arr(s, dtype):
+    return np.fromstring(s[1:-1], dtype=dtype, sep=" ")

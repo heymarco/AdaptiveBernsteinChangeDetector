@@ -5,7 +5,23 @@ import numpy as np
 import pandas as pd
 
 from changeds.metrics import *
-from util import get_last_experiment_dir
+from util import get_last_experiment_dir, str_to_arr
+
+
+def compute_jaccard(df: pd.DataFrame):
+    if not np.any(pd.isnull(df["dims-found"]) == False):
+        return np.nan
+    changes = df["change-point"]
+    idxs = [i for i, change in enumerate(changes) if change]
+    regions_gt = df["dims-gt"].iloc[idxs]
+    regions_detected = df["dims-found"].iloc[idxs]
+    results = []
+    for a, b in zip(regions_gt, regions_detected):
+        a = str_to_arr(a, np.int)
+        b = str_to_arr(b, np.int)
+        jac = jaccard(a, b)
+        results.append(jac)
+    return np.mean(results)
 
 
 if __name__ == '__main__':
@@ -28,11 +44,12 @@ if __name__ == '__main__':
             rec = recall(tp, fp, fn)
             f1 = fb_score(true_cps, reported_cps, T=3000)
             mttd = mean_until_detection(true_cps, reported_cps)
+            jac = compute_jaccard(rep_data)
             result_df.append([
-                dataset, approach, params, prec, rec, f1, mttd
+                dataset, approach, params, prec, rec, f1, mttd, jac
             ])
     result_df = pd.DataFrame(result_df, columns=["Dataset", "Approach", "Parameters",
-                                                 "Prec.", "Rec.", "F1", "MTTD"])
+                                                 "Prec.", "Rec.", "F1", "MTTD", "Jaccard"])
     result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().round(2)
     result_df.reset_index()
     print(result_df.sort_values(by=["Dataset", "Approach", "Parameters"]).to_latex(escape=False))
