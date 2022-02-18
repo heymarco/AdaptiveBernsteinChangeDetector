@@ -26,12 +26,12 @@ if __name__ == '__main__':
     n_per_concept = 2000
     n_drifts = 30
     datasets = [
-        LED(n_per_concept=n_per_concept, n_drifts=n_drifts, preprocess=preprocess),
-        RBF(n_per_concept=n_drifts, n_drifts=n_drifts, preprocess=preprocess),
+        # LED(n_per_concept=n_per_concept, n_drifts=n_drifts, preprocess=preprocess),
+        # RBF(n_per_concept=n_per_concept, n_drifts=n_drifts, preprocess=preprocess),
         RandomOrderHAR(num_changes=n_drifts, preprocess=preprocess),
-        RandomOrderMNIST(num_changes=n_drifts, preprocess=preprocess),
-        RandomOrderFashionMNIST(num_changes=n_drifts, preprocess=preprocess),
-        RandomOrderCIFAR10(num_changes=n_drifts, preprocess=preprocess)
+        # RandomOrderMNIST(num_changes=n_drifts, preprocess=preprocess),
+        # RandomOrderFashionMNIST(num_changes=n_drifts, preprocess=preprocess),
+        # RandomOrderCIFAR10(num_changes=n_drifts, preprocess=preprocess)
     ]
 
     experiment = Experiment(configurations=algorithms, datasets=datasets, reps=2)

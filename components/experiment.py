@@ -13,10 +13,12 @@ class Experiment:
     def __init__(self,
                  configurations: dict,
                  datasets: list,
+                 algorithm_timeout: float = 30,  # 30 minutes
                  reps: int = 1):
         self.target_path = new_experiment_dir()
         self.configurations = configurations
         self.datasets = datasets
+        self.algorithm_timeout = algorithm_timeout
         self.reps = reps
         all_configs = []
         for conf in self.configurations.values():
@@ -75,3 +77,6 @@ class Experiment:
                 if isinstance(stream, RegionalChangeStream):
                     logger.track_dims_gt(stream.approximate_change_regions()[change_count - 1])
             logger.finalize_round()
+            current_runtime = logger.get_runtime_seconds()
+            if current_runtime / 60 > self.algorithm_timeout:
+                break

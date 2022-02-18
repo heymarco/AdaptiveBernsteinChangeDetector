@@ -1,8 +1,8 @@
-import sys
 import os
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from changeds.metrics import *
 from util import get_last_experiment_dir, str_to_arr
@@ -19,16 +19,21 @@ def compute_jaccard(df: pd.DataFrame):
     for a, b in zip(regions_gt, regions_detected):
         a = str_to_arr(a, np.int)
         b = str_to_arr(b, np.int)
-        jac = jaccard(a, b)
+        jac = jaccard(a, b) if len(b) > 0 else np.nan
         results.append(jac)
     return np.mean(results)
+
+
+def mean_time_per_example(df):
+    series = df["time"]
+    return series.diff().mean()
 
 
 if __name__ == '__main__':
     last_exp_dir = get_last_experiment_dir()
     all_files = os.listdir(last_exp_dir)
     result_df = []
-    for file in all_files:
+    for file in tqdm(all_files):
         df = pd.read_csv(os.path.join(last_exp_dir, file)).convert_dtypes().ffill()
         approach = np.unique(df["approach"])[0]
         params = np.unique(df["parameters"])[0]
@@ -45,11 +50,13 @@ if __name__ == '__main__':
             f1 = fb_score(true_cps, reported_cps, T=3000)
             mttd = mean_until_detection(true_cps, reported_cps)
             jac = compute_jaccard(rep_data)
+            mtpe = mean_time_per_example(rep_data)
+            mtpe = round(mtpe / 10e6, 3)
             result_df.append([
-                dataset, approach, params, prec, rec, f1, mttd, jac
+                dataset, approach, params, prec, rec, f1, mttd, jac, mtpe
             ])
     result_df = pd.DataFrame(result_df, columns=["Dataset", "Approach", "Parameters",
-                                                 "Prec.", "Rec.", "F1", "MTTD", "Jaccard"])
+                                                 "Prec.", "Rec.", "F1", "MTTD", "Jaccard", "MTPE [ms]"])
     result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().round(2)
     result_df.reset_index()
     print(result_df.sort_values(by=["Dataset", "Approach", "Parameters"]).to_latex(escape=False))

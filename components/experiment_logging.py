@@ -7,12 +7,21 @@ import numpy as np
 
 class ExperimentLogger:
 
-    def __init__(self):
+    def __init__(self,
+                 columns: list = ["rep", "approach", "parameters", "dataset", "data-index", "time", "metric",
+                                  "safe-index", "p", "change-point", "is-change", "delay", "w1", "w2",
+                                  "sigma1", "sigma2", "eps", "accuracy", "ndims", "dims-gt", "dims-found"]):
         self._data = []
-        self._columns = ["rep", "approach", "parameters", "dataset", "data-index", "time", "metric", "safe-index", "p",
-                         "change-point", "is-change", "delay", "w1", "w2", "sigma1", "sigma2", "eps", "accuracy",
-                         "ndims", "dims-gt", "dims-found"]
+        self._columns = columns
         self._current_row = [np.nan for _ in range(len(self._columns))]
+
+    def get_runtime_seconds(self):
+        if len(self._data) == 0:
+            return np.nan
+        start = self._data[0][self._index_of("time")]
+        end = self._data[-1][self._index_of("time")]
+        diff_ns = end - start
+        return diff_ns / 10e9
 
     def track_rep(self, rep: int):
         self._track_value(rep, "rep")

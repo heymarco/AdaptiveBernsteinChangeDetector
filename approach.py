@@ -16,7 +16,7 @@ class ABCD(RegionalDriftDetector):
                  bound: str = "bernstein",
                  update_epochs: int = 20,
                  split_type: str = "exp",
-                 new_ae: bool = False,
+                 new_ae: bool = True,
                  encoding_factor: float = 0.7):
         """
         :param delta: The desired confidence level
