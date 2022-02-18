@@ -1,8 +1,9 @@
 from sklearn.model_selection import ParameterGrid
 
-from changeds import RandomOrderHAR
+from changeds import RandomOrderHAR, LED, RBF, RandomOrderMNIST, RandomOrderFashionMNIST, RandomOrderCIFAR10
 
 from detector import ABCD
+from detectors import WATCH, IBDD, D3
 
 from exp_logging.experiment import Experiment
 from util import preprocess
