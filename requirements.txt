@@ -1,4 +1,4 @@
-name: HoeffdingChangeDetector
+name: abcd
 channels:
   - pytorch
   - conda-forge
