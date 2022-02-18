@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim
 
-from logging.experiment_logging import logger
+from exp_logging.logger import logger
 
 
 class AutoEncoder(nn.Module):

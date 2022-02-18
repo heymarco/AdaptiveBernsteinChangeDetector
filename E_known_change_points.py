@@ -2,9 +2,9 @@ from sklearn.model_selection import ParameterGrid
 
 from changeds import RandomOrderHAR
 
-from approach import ABCD
+from detector import ABCD
 
-from logging.experiment import Experiment
+from exp_logging.experiment import Experiment
 from util import preprocess
 
 

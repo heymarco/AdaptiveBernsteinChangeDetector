@@ -1,11 +1,7 @@
-from typing import Protocol
-from abc import abstractmethod
-
 import numpy as np
 
 
 class Aggregate:
-
     def __init__(self, n, mean, m2):
         self.n = n
         self._mean = mean
@@ -24,7 +20,6 @@ class Aggregate:
 
 
 class PairwiseAggregate:
-
     def __init__(self, agg1: Aggregate, agg2: Aggregate):
         self.agg1 = agg1
         self.agg2 = agg2
@@ -43,7 +38,6 @@ class PairwiseAggregate:
 
 
 class PairwiseVariance:
-
     def __init__(self, max_size: int):
         self.aggregates = []
         self.max_size = max_size
@@ -71,7 +65,7 @@ class PairwiseVariance:
         self.aggregates = []
 
     def pairwise_aggregate(self, index: int):
-        agg1 = self.aggregates[index-1]
+        agg1 = self.aggregates[index - 1]
         agg2 = self.aggregates[-1]
 
         n_ab = agg2.n

@@ -17,12 +17,13 @@ def compute_jaccard(df: pd.DataFrame):
     regions_detected = df["dims-found"].iloc[idxs]
     results = []
     for a, b in zip(regions_gt, regions_detected):
-        if a == "<NA>" or b == "<NA>":
+        try:
+            a = str_to_arr(a, np.int)
+            b = str_to_arr(b, np.int)
+            jac = jaccard(a, b) if len(b) > 0 else np.nan
+            results.append(jac)
+        except:
             continue
-        a = str_to_arr(a, np.int)
-        b = str_to_arr(b, np.int)
-        jac = jaccard(a, b) if len(b) > 0 else np.nan
-        results.append(jac)
     return np.nanmean(results) if len(results) > 0 else np.nan
 
 

@@ -3,7 +3,7 @@ import numpy as np
 from changeds import ChangeStream, RegionalChangeStream
 from detectors import DriftDetector, RegionalDriftDetector
 
-from logging.experiment_logging import logger
+from exp_logging.logger import logger
 from util import new_experiment_dir, new_filepath_in_current_experiment
 
 
