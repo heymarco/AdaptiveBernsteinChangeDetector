@@ -1,14 +1,10 @@
-import os.path
-
-import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
 
 from detectors import RegionalDriftDetector
 
 from components.feature_extraction import AutoEncoder
 from components.windowing import AdaptiveWindow, p_bernstein
-from components.experiment_logging import logger
+from logging.experiment_logging import logger
 
 
 class ABCD(RegionalDriftDetector):

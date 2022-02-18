@@ -1,6 +1,6 @@
 import numpy as np
 from components.std import PairwiseVariance
-from components.experiment_logging import logger
+from logging.experiment_logging import logger
 
 
 def epsilon_cut_hoeffding(card_w1, card_w2, delta: float):
