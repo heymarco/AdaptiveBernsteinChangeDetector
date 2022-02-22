@@ -13,6 +13,7 @@ class ABCD(RegionalDriftDetector):
                  update_epochs: int = 20,
                  split_type: str = "exp",
                  new_ae: bool = True,
+                 bonferroni: bool = True,
                  encoding_factor: float = 0.7):
         """
         :param delta: The desired confidence level
@@ -22,7 +23,8 @@ class ABCD(RegionalDriftDetector):
         self.split_type = split_type
         self.delta = delta
         self.new_ae = new_ae
-        self.window = AdaptiveWindow(delta=delta, bound=bound, split_type=split_type)
+        self.bonferroni = bonferroni
+        self.window = AdaptiveWindow(delta=delta, bound=bound, split_type=split_type, bonferroni=bonferroni)
         self.ae: AutoEncoder = None
         self.last_change_point = None
         self.last_detection_point = None
@@ -39,7 +41,7 @@ class ABCD(RegionalDriftDetector):
         return "ABCD2" if self.split_type == "exp" else "ABCD"
 
     def parameter_str(self) -> str:
-        return r"$\delta = {}, E = {}, \eta = {}$".format(self.delta, self.epochs, self.eta)
+        return r"$\delta = {}, E = {}, \eta = {}, bc = {}$".format(self.delta, self.epochs, self.eta, self.bonferroni)
 
     def pre_train(self, data):
         if self.ae is None:

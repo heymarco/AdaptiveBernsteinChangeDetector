@@ -45,13 +45,15 @@ def lemma_737(n, sigma, delta):
 
 
 class AdaptiveWindow:
-    def __init__(self, delta: float, bound: str, max_size: int = np.infty, split_type: str = "all"):
+    def __init__(self, delta: float, bound: str, max_size: int = np.infty,
+                 split_type: str = "all", bonferroni: bool = True):
         """
         :param delta: The error rate
         :param bound: The bound, 'hoeffding', 'chernoff', or 'bernstein'
         """
         self.w = []
         self.delta = delta
+        self.bonferroni = bonferroni
         self._last_split_index = 0
         self.n_seen_items = 0
         self._best_split_candidate = 0
@@ -207,6 +209,7 @@ class AdaptiveWindow:
                                       sigma1=sigma[:, 0], sigma2=sigma[:, 1])
         self.min_p_value = np.min(delta_empirical)
         self.argmin_p_value = np.argmin(delta_empirical)
+        d = self.delta_bonferroni() if self.bonferroni else self.delta
         has_change = self.min_p_value < self.delta_bonferroni()
 
         # Logging:
