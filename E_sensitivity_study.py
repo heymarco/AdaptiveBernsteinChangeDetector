@@ -23,7 +23,7 @@ if __name__ == '__main__':
     }
 
     n_per_concept = 2000
-    n_drifts = 50
+    n_drifts = 30
     n_reps = 1
     datasets = [
         LED(n_per_concept=n_per_concept, n_drifts=n_drifts, preprocess=preprocess),

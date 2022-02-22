@@ -85,4 +85,5 @@ class Experiment:
             logger.finalize_round()
             rount_time = time.perf_counter()
             if rount_time - start_time > self.algorithm_timeout:
+                print("{} with {} on {} timed out!".format(detector.name(), detector.parameter_str(), stream.id()))
                 break
