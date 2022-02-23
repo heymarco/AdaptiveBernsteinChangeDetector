@@ -1,6 +1,6 @@
 from sklearn.model_selection import ParameterGrid
 
-from changeds import RandomOrderHAR, LED, RBF, RandomOrderMNIST, RandomOrderFashionMNIST, RandomOrderCIFAR10
+from changeds import RandomOrderHAR, LED, RBF, RandomOrderMNIST, RandomOrderFashionMNIST, RandomOrderCIFAR10, GasSensors
 
 from detector import ABCD
 
@@ -26,6 +26,7 @@ if __name__ == '__main__':
     n_drifts = 30
     n_reps = 1
     datasets = [
+        GasSensors(num_changes=n_drifts, preprocess=preprocess),
         LED(n_per_concept=n_per_concept, n_drifts=n_drifts, preprocess=preprocess),
         RBF(n_per_concept=n_per_concept, n_drifts=n_drifts, preprocess=preprocess),
         RandomOrderHAR(num_changes=n_drifts, preprocess=preprocess),
