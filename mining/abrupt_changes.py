@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 from changeds.metrics import *
 from util import get_last_experiment_dir, str_to_arr
+from E_abrupt_changes import ename
 
 
 def compute_jaccard(df: pd.DataFrame):
@@ -32,7 +33,7 @@ def mean_time_per_example(df):
 
 
 def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}):
-    last_exp_dir = get_last_experiment_dir()
+    last_exp_dir = get_last_experiment_dir(ename)
     all_files = os.listdir(last_exp_dir)
     result_df = []
     j = 0
@@ -53,7 +54,7 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
             fn = false_negatives(true_cps, reported_cps, cp_distance)
             prec = precision(tp, fp, fn)
             rec = recall(tp, fp, fn)
-            f1 = fb_score(true_cps, reported_cps, T=3000)
+            f1 = fb_score(true_cps, reported_cps, T=2000)
             mttd = mean_until_detection(true_cps, reported_cps)
             jac = compute_jaccard(rep_data)
             mtpe = mean_time_per_example(rep_data)
