@@ -4,7 +4,7 @@ import time
 import numpy as np
 import psutil
 
-from changeds import ChangeStream, RegionalChangeStream, GradualChangeStream
+from changeds import ChangeStream, RegionalChangeStream, GradualChangeStream, QuantifiesSeverity
 from detectors import DriftDetector, RegionalDriftDetector
 
 from exp_logging.logger import logger
@@ -39,19 +39,14 @@ class Experiment:
                     self.repeat(alg, dataset, warm_start=warm_start)
                     i += 1
 
-    def repeat(self, detector: DriftDetector, stream: ChangeStream, warm_start: int = 100, parallel=True):
-        if parallel:
-            args_list = [(detector, stream, warm_start) for _ in range(self.reps)]
-            ncores = min(psutil.cpu_count(logical=False) - 1, self.reps)
-            run_async(self.evaluate_algorithm, args_list=args_list, njobs=ncores)
-        else:
-            for rep in range(self.reps):
-                logger.track_rep(rep)
-                self.evaluate_algorithm(detector, stream, warm_start)
+    def repeat(self, detector: DriftDetector, stream: ChangeStream, warm_start: int = 100):
+        for rep in range(self.reps):
+            self.evaluate_algorithm(detector, stream, warm_start)
         logger.save(append=False, path=new_filepath_in_experiment_with_name(self.name))
 
-    def evaluate_algorithm(self, detector: DriftDetector, stream: ChangeStream, warm_start: int = 100):
+    def evaluate_algorithm(self, detector: DriftDetector, stream: ChangeStream, rep: int, warm_start: int = 100):
         stream.restart()
+        logger.track_rep(rep)
         logger.track_approach_information(detector.name(), detector.parameter_str())
         logger.track_dataset_name(stream.id())
         logger.track_stream_type(stream.type())
@@ -80,14 +75,18 @@ class Experiment:
                 i += 1
             if is_change:
                 change_count += 1
+                if isinstance(stream, QuantifiesSeverity):
+                    logger.track_drift_severity_grount_truth(stream.get_severity())
             detector.add_element(next_sample)
             logger.track_change_point(detector.detected_change())
             logger.track_metric(detector.metric())
             if detector.detected_change():
                 logger.track_delay(detector.delay)
+                if isinstance(detector, QuantifiesSeverity):
+                    logger.track_drift_severity(detector.get_severity())
                 if isinstance(detector, RegionalDriftDetector):
                     logger.track_dims_found(detector.get_drift_dims())
-                if isinstance(stream, RegionalChangeStream):
+                if isinstance(stream, RegionalChangeStream) and change_count > 0:
                     logger.track_dims_gt(stream.approximate_change_regions()[change_count - 1])
             logger.finalize_round()
             rount_time = time.perf_counter()

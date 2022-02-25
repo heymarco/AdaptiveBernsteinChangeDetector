@@ -68,13 +68,15 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
             ])
     result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "F1", "Prec.",
                                                  "Rec.", "RCD", "Jaccard", "MTTD", "MTPO [ms]", "PC"])
+    result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
     if print_summary:
         summary = filter_best(result_df, **summary_kwargs)
-    result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
     result_df = result_df.round(decimals={
         "F1": 2, "Prec.": 2, "Rec.": 2, "RCD": 2, "Jaccard": 2, "MTPO [ms]": 3, "MTTD": 1
     })
-    result_df = result_df.sort_values(by=["Dims", "Approach", "Parameters"])
+    result_df[result_df["Dataset"] == "Average"] = 0
+    sort_by = ["Dataset", "Dims", "Approach", "Parameters"]
+    result_df = result_df.sort_values(by=sort_by)
     result_df.drop(["Jaccard", "Parameters", "Dims"], axis=1, inplace=True)
     result_df["PC"] = result_df["PC"].astype(int)
     print(result_df.set_index(["Dataset", "Approach"]).to_latex(escape=False))
@@ -82,7 +84,7 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
         summary = summary.round(decimals={
             "F1": 2, "Prec.": 2, "Rec.": 2, "RCD": 2, "Jaccard": 2, "MTPO [ms]": 3, "MTTD": 1
         })
-        summary = summary.sort_values(by=["Dims", "Approach", "Parameters"])
+        summary = summary.sort_values(by=sort_by)
         summary.drop(["Jaccard", "Parameters", "Dims"], axis=1, inplace=True)
         summary["PC"] = summary["PC"].astype(int)
         print(summary.set_index(["Dataset", "Approach"]).to_latex(escape=False))
@@ -97,22 +99,25 @@ def add_mean_column(df: pd.DataFrame):
 
 
 def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
+    df = df.sort_values(by=["F1", "MTTD"])
     median_indices = []
     min_indices = []
     max_indices = []
     indices = []
     for _, gdf in df.groupby(["Dataset", "Approach"]):
-        indices.append(gdf["F1"].idxmax())
+        max_index = gdf["F1"].idxmax()
+        indices.append(max_index)
         if "ABCD2" in gdf["Approach"].to_numpy():
+            max_indices.append(max_index)
             if median:
                 med = gdf["F1"].median()
                 median_index = (gdf["F1"] - med).abs().idxmin()
+                if median_index == max_index:
+                    median_index = (gdf["F1"] - med).abs().drop(max_index).idxmin()
                 median_indices.append(median_index)
             if worst:
                 min_index = gdf["F1"].idxmin()
                 min_indices.append(min_index)
-            max_index = gdf["F1"].idxmax()
-            max_indices.append(max_index)
     if median:
         indices += median_indices
         df["Approach"].loc[median_indices] = "ABCD2 (med)"

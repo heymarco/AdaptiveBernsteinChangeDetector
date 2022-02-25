@@ -1,13 +1,15 @@
 import numpy as np
+from changeds import QuantifiesSeverity
 
 from detectors import RegionalDriftDetector
+from scipy.stats import zscore
 
 from components.feature_extraction import AutoEncoder
 from components.windowing import AdaptiveWindow, p_bernstein
 from exp_logging.logger import logger
 
 
-class ABCD(RegionalDriftDetector):
+class ABCD(RegionalDriftDetector, QuantifiesSeverity):
     def __init__(self, delta: float,
                  bound: str = "bernstein",
                  update_epochs: int = 20,
@@ -35,6 +37,7 @@ class ABCD(RegionalDriftDetector):
         self.drift_dimensions = None
         self.epochs = update_epochs
         self.eta = encoding_factor
+        self._severity = np.nan
         super(ABCD, self).__init__()
 
     def name(self) -> str:
@@ -64,7 +67,7 @@ class ABCD(RegionalDriftDetector):
         logger.track_change_point(self.in_concept_change)
         if self.in_concept_change:
             self._find_drift_dimensions()
-            # TODO: evaluate magnitude
+            self._evaluate_magnitude()
 
             # LOGGING
             self.last_detection_point = detection_point
@@ -103,4 +106,13 @@ class ABCD(RegionalDriftDetector):
             i for i in range(len(self.drift_dimensions)) if self.drift_dimensions[i] < self.delta
         ])
 
+    def get_severity(self):
+        return self._severity
+
+    def _evaluate_magnitude(self):
+        agg = self.window.variance_tracker.pairwise_aggregate(self.window._last_split_index)
+        mean_old, mean_new = agg.mean()
+        std_old, _ = agg.std()
+        z_score_normalized = np.abs(mean_new - mean_old) / std_old
+        self._severity = z_score_normalized
 

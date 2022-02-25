@@ -1,5 +1,6 @@
 import os.path
 import time
+import uuid
 
 import pandas as pd
 import numpy as np
@@ -11,7 +12,7 @@ class ExperimentLogger:
                  columns: list = ["rep", "approach", "parameters", "dataset", "data-index", "time", "metric",
                                   "safe-index", "p", "change-point", "is-change", "delay", "w1", "w2",
                                   "sigma1", "sigma2", "eps", "accuracy", "ndims", "dims-gt", "dims-found",
-                                  "drift-type", "drift-length"]):
+                                  "drift-type", "drift-length", "severity-gt", "severity"]):
         self._data = []
         self._columns = columns
         self._current_row = [np.nan for _ in range(len(self._columns))]
@@ -83,6 +84,12 @@ class ExperimentLogger:
 
     def track_drift_length(self, length):
         self._track_value(length, "drift-length")
+
+    def track_drift_severity_grount_truth(self, gt):
+        self._track_value(gt, "severity-gt")
+
+    def track_drift_severity(self, sev):
+        self._track_value(sev, "severity")
 
     def finalize_round(self):
         self._data.append(self._current_row)
