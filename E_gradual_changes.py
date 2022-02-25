@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     n_per_concept = 2000
     n_drifts = 20
-    drift_length = 200
+    drift_length = 300
     stretch = True
     n_reps = 10
     datasets = [
