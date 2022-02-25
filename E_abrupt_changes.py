@@ -18,7 +18,7 @@ if __name__ == '__main__':
         WATCH: {"kappa": [100], "mu": [1000, 2000], "epsilon": [2, 3], "omega": [500, 1000]},
         IBDD: {"w": [100, 200, 300], "m": [10, 20, 50, 100]},  # already tuned manually... other values work very bad.
         D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9], "tree_depth": [1]},  # tree_depths > 1 are too sensitive...
-        ABCD: {"encoding_factor": [0.3, 0.5, 0.7], "delta": [0.05, 0.01], "update_epochs": [20, 50, 100]},
+        ABCD: {"encoding_factor": [0.3, 0.5, 0.7], "delta": [0.1, 0.05, 0.01], "update_epochs": [20, 50, 100]},
     }
 
     algorithms = {
@@ -26,8 +26,8 @@ if __name__ == '__main__':
     }
 
     n_per_concept = 2000
-    n_drifts = 30
-    n_reps = 1
+    n_drifts = 10
+    n_reps = 10
     datasets = [
         GasSensors(num_changes=n_drifts, preprocess=preprocess),
         LED(n_per_concept=n_per_concept, n_drifts=n_drifts, preprocess=preprocess),

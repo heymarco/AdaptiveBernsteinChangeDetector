@@ -73,11 +73,13 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
         "F1": 2, "Prec.": 2, "Rec.": 2, "RCD": 2, "Jaccard": 2, "MTPO [ms]": 3, "MTTD": 1
     })
     result_df = result_df.sort_values(by=["Dataset", "Approach", "Parameters"])
+    result_df.drop(["Jaccard", "Parameters"], axis=1, inplace=True)
     print(result_df.to_latex(escape=False))
     if print_summary:
         summary = summary.round(decimals={
             "F1": 2, "Prec.": 2, "Rec.": 2, "RCD": 2, "Jaccard": 2, "MTPO [ms]": 3, "MTTD": 1
         })
+        summary.drop(["Jaccard", "Parameters"], axis=1, inplace=True)
         print(summary.to_latex(escape=False))
 
 

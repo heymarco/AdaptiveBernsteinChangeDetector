@@ -1,12 +1,14 @@
+import multiprocessing
 import time
 
 import numpy as np
+import psutil
 
 from changeds import ChangeStream, RegionalChangeStream, GradualChangeStream
 from detectors import DriftDetector, RegionalDriftDetector
 
 from exp_logging.logger import logger
-from util import new_dir_for_experiment_with_name, new_filepath_in_experiment_with_name
+from util import new_dir_for_experiment_with_name, new_filepath_in_experiment_with_name, run_async
 
 
 class Experiment:
@@ -37,10 +39,15 @@ class Experiment:
                     self.repeat(alg, dataset, warm_start=warm_start)
                     i += 1
 
-    def repeat(self, detector: DriftDetector, stream: ChangeStream, warm_start: int = 100):
-        for rep in range(self.reps):
-            logger.track_rep(rep)
-            self.evaluate_algorithm(detector, stream, warm_start)
+    def repeat(self, detector: DriftDetector, stream: ChangeStream, warm_start: int = 100, parallel=True):
+        if parallel:
+            args_list = [(detector, stream, warm_start) for _ in range(self.reps)]
+            ncores = min(psutil.cpu_count(logical=False) - 1, self.reps)
+            run_async(self.evaluate_algorithm, args_list=args_list, njobs=ncores)
+        else:
+            for rep in range(self.reps):
+                logger.track_rep(rep)
+                self.evaluate_algorithm(detector, stream, warm_start)
         logger.save(append=False, path=new_filepath_in_experiment_with_name(self.name))
 
     def evaluate_algorithm(self, detector: DriftDetector, stream: ChangeStream, warm_start: int = 100):
