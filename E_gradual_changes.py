@@ -26,10 +26,10 @@ if __name__ == '__main__':
     }
 
     n_per_concept = 2000
-    n_drifts = 30
+    n_drifts = 20
     drift_length = 200
     stretch = True
-    n_reps = 1
+    n_reps = 10
     datasets = [
         GradualGasSensors(num_changes=n_drifts, drift_length=drift_length, stretch=stretch, preprocess=preprocess),
         GradualLED(num_changes=n_drifts, n_per_concept=n_per_concept, drift_length=drift_length,
