@@ -1,6 +1,7 @@
 from sklearn.model_selection import ParameterGrid
 
-from changeds import GradualLED, GradualRBF, GradualMNIST, GradualFashionMNIST, GradualCifar10, GradualGasSensors
+from changeds import GradualLED, GradualRBF, GradualMNIST, GradualFashionMNIST, GradualCifar10, GradualGasSensors, \
+    GradualHAR
 
 from detector import ABCD
 from detectors import WATCH, IBDD, D3, AdwinK
@@ -32,6 +33,7 @@ if __name__ == '__main__':
     n_reps = 10
     datasets = [
         GradualGasSensors(num_changes=n_drifts, drift_length=drift_length, stretch=stretch, preprocess=preprocess),
+        GradualHAR(num_changes=n_drifts, drift_length=drift_length, stretch=stretch, preprocess=preprocess),
         GradualLED(num_changes=n_drifts, n_per_concept=n_per_concept, drift_length=drift_length,
                    stretch=stretch, preprocess=preprocess),
         GradualRBF(num_changes=n_drifts, n_per_concept=n_per_concept, drift_length=drift_length,
