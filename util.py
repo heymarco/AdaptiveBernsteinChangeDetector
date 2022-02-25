@@ -43,7 +43,7 @@ def new_filepath_in_experiment_with_name(name: str) -> str:
         new_df = "1.csv"
     else:
         ids = [int(os.path.splitext(csv)[0]) for csv in dfs]
-        current_index = np.sort(ids)[-1]
+        current_index = np.sort(ids)[-1]  # I think this can lead to a race condition if we execute parallel.
         new_df = str(current_index + 1) + ".csv"
     return os.path.join(this_exp_dir, current_dir, new_df)
 

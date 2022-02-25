@@ -39,15 +39,17 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
     j = 0
     for file in tqdm(all_files):
         j += 1
-        # if j < 270 or j > 280:
-        #     continue
+        # if j > 10:
+        #     break
         df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes().ffill()
         approach = np.unique(df["approach"])[0]
         params = np.unique(df["parameters"])[0]
         dataset = np.unique(df["dataset"])[0]
+        dims = np.unique(df["ndims"])[0]
         for rep, rep_data in df.groupby("rep"):
             true_cps = [i for i in range(len(rep_data)) if rep_data["is-change"].iloc[i]]
             cp_distance = true_cps[0]
+            n_seen_changes = len(true_cps)
             reported_cps = [i for i in range(len(rep_data)) if rep_data["change-point"].iloc[i]]
             tp = true_positives(true_cps, reported_cps, cp_distance)
             fp = false_positives(true_cps, reported_cps, cp_distance)
@@ -61,26 +63,29 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
             mtpe = mtpe / 10e6
             rcd = ratio_changes_detected(true_cps, reported_cps)
             result_df.append([
-                dataset, approach, params, f1, prec, rec, rcd,
-                jac, mttd, mtpe
+                dataset, dims, approach, params, f1, prec, rec, rcd,
+                jac, mttd, mtpe, n_seen_changes
             ])
-    result_df = pd.DataFrame(result_df, columns=["Dataset", "Approach", "Parameters", "F1", "Prec.",
-                                                 "Rec.", "RCD", "Jaccard", "MTTD", "MTPO [ms]"])
+    result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "F1", "Prec.",
+                                                 "Rec.", "RCD", "Jaccard", "MTTD", "MTPO [ms]", "PC"])
     if print_summary:
         summary = filter_best(result_df, **summary_kwargs)
-    result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean()
+    result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
     result_df = result_df.round(decimals={
         "F1": 2, "Prec.": 2, "Rec.": 2, "RCD": 2, "Jaccard": 2, "MTPO [ms]": 3, "MTTD": 1
     })
-    result_df = result_df.sort_values(by=["Dataset", "Approach", "Parameters"])
-    result_df.drop(["Jaccard", "Parameters"], axis=1, inplace=True)
-    print(result_df.to_latex(escape=False))
+    result_df = result_df.sort_values(by=["Dims", "Approach", "Parameters"])
+    result_df.drop(["Jaccard", "Parameters", "Dims"], axis=1, inplace=True)
+    result_df["PC"] = result_df["PC"].astype(int)
+    print(result_df.set_index(["Dataset", "Approach"]).to_latex(escape=False))
     if print_summary:
         summary = summary.round(decimals={
             "F1": 2, "Prec.": 2, "Rec.": 2, "RCD": 2, "Jaccard": 2, "MTPO [ms]": 3, "MTTD": 1
         })
-        summary.drop(["Jaccard", "Parameters"], axis=1, inplace=True)
-        print(summary.to_latex(escape=False))
+        summary = summary.sort_values(by=["Dims", "Approach", "Parameters"])
+        summary.drop(["Jaccard", "Parameters", "Dims"], axis=1, inplace=True)
+        summary["PC"] = summary["PC"].astype(int)
+        print(summary.set_index(["Dataset", "Approach"]).to_latex(escape=False))
 
 
 def add_mean_column(df: pd.DataFrame):
@@ -119,7 +124,7 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
     df = df.loc[indices]
     if add_mean:
         df = add_mean_column(df)
-    return df
+    return df.reset_index()
 
 
 if __name__ == '__main__':

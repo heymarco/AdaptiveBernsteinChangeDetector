@@ -26,16 +26,16 @@ if __name__ == '__main__':
     }
 
     n_per_concept = 2000
-    n_drifts = 10
+    n_concepts = 21
     n_reps = 10
     datasets = [
-        GasSensors(num_changes=n_drifts, preprocess=preprocess),
-        LED(n_per_concept=n_per_concept, n_drifts=n_drifts, preprocess=preprocess),
-        RBF(n_per_concept=n_per_concept, n_drifts=n_drifts, preprocess=preprocess),
-        RandomOrderHAR(num_changes=n_drifts, preprocess=preprocess),
-        RandomOrderMNIST(num_changes=n_drifts, preprocess=preprocess),
-        RandomOrderFashionMNIST(num_changes=n_drifts, preprocess=preprocess),
-        RandomOrderCIFAR10(num_changes=n_drifts, preprocess=preprocess)
+        GasSensors(num_concepts=n_concepts, preprocess=preprocess),
+        LED(n_per_concept=n_per_concept, num_concepts=n_concepts, preprocess=preprocess),
+        RBF(n_per_concept=n_per_concept, num_concepts=n_concepts, preprocess=preprocess),
+        RandomOrderHAR(num_concepts=n_concepts, preprocess=preprocess),
+        RandomOrderMNIST(num_concepts=n_concepts, preprocess=preprocess),
+        RandomOrderFashionMNIST(num_concepts=n_concepts, preprocess=preprocess),
+        RandomOrderCIFAR10(num_concepts=n_concepts, preprocess=preprocess)
     ]
 
     experiment = Experiment(name=ename, configurations=algorithms, datasets=datasets, reps=n_reps)
