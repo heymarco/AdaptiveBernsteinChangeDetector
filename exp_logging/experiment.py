@@ -41,7 +41,7 @@ class Experiment:
                     self.repeat(alg, dataset, warm_start=warm_start)
                     i += 1
 
-    def repeat(self, detector: DriftDetector, stream: ChangeStream, warm_start: int = 100, parallel: bool = False):
+    def repeat(self, detector: DriftDetector, stream: ChangeStream, warm_start: int = 100, parallel: bool = True):
         if parallel:
             njobs = min(self.reps, psutil.cpu_count() - 1)
             args_list = [[detector, stream, rep, warm_start] for rep in range(self.reps)]
