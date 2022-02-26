@@ -6,11 +6,12 @@ from scipy.stats import zscore
 
 from components.feature_extraction import AutoEncoder
 from components.windowing import AdaptiveWindow, p_bernstein
-from exp_logging.logger import logger
+from exp_logging.logger import ExperimentLogger
 
 
 class ABCD(RegionalDriftDetector, QuantifiesSeverity):
-    def __init__(self, delta: float,
+    def __init__(self,
+                 delta: float,
                  bound: str = "bernstein",
                  update_epochs: int = 20,
                  split_type: str = "exp",
@@ -38,6 +39,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.epochs = update_epochs
         self.eta = encoding_factor
         self._severity = np.nan
+        self.logger = None
         super(ABCD, self).__init__()
 
     def name(self) -> str:
@@ -45,6 +47,10 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
 
     def parameter_str(self) -> str:
         return r"$\delta = {}, E = {}, \eta = {}, bc = {}$".format(self.delta, self.epochs, self.eta, self.bonferroni)
+
+    def set_logger(self, l: ExperimentLogger):
+        self.logger = l
+        self.window.set_logger(l)
 
     def pre_train(self, data):
         if self.ae is None:
@@ -64,7 +70,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.window.grow(new_tuple)  # add new tuple to window
         self._last_loss = self.window.last_loss()
         self.in_concept_change, detection_point = self.window.has_change()
-        logger.track_change_point(self.in_concept_change)
+        self.logger.track_change_point(self.in_concept_change)
         if self.in_concept_change:
             self._find_drift_dimensions()
             self._evaluate_magnitude()
@@ -73,7 +79,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
             self.last_detection_point = detection_point
             self.delay = len(self.window) - self.window._last_split_index
             self.last_change_point = self.last_detection_point - self.delay
-            logger.track_delay(self.delay)
+            self.logger.track_delay(self.delay)
 
             if self.new_ae:
                 self.ae = AutoEncoder(input_size=input_value.shape[-1], eta=self.eta)

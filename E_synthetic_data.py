@@ -24,8 +24,8 @@ if __name__ == '__main__':
     }
 
     n_per_concept = 1000
-    n_concepts = 11
-    n_reps = 1
+    n_concepts = 3
+    n_reps = 3
     n_dims = 100
     steps = 5
     datasets = []

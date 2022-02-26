@@ -2,12 +2,14 @@ import multiprocessing
 import time
 
 import numpy as np
+import pandas as pd
 import psutil
 
 from changeds import ChangeStream, RegionalChangeStream, GradualChangeStream, QuantifiesSeverity
+from detector import ABCD
 from detectors import DriftDetector, RegionalDriftDetector
 
-from exp_logging.logger import logger
+from exp_logging.logger import ExperimentLogger
 from util import new_dir_for_experiment_with_name, new_filepath_in_experiment_with_name, run_async
 
 
@@ -16,7 +18,7 @@ class Experiment:
                  name: str,
                  configurations: dict,
                  datasets: list,
-                 algorithm_timeout: float = 15 * 60,  # 15 minutes
+                 algorithm_timeout: float = 30 * 60,  # 15 minutes
                  reps: int = 1):
         self.name = name
         self.configurations = configurations
@@ -39,17 +41,28 @@ class Experiment:
                     self.repeat(alg, dataset, warm_start=warm_start)
                     i += 1
 
-    def repeat(self, detector: DriftDetector, stream: ChangeStream, warm_start: int = 100):
-        for rep in range(self.reps):
-            self.evaluate_algorithm(detector, stream, warm_start)
-        logger.save(append=False, path=new_filepath_in_experiment_with_name(self.name))
+    def repeat(self, detector: DriftDetector, stream: ChangeStream, warm_start: int = 100, parallel: bool = False):
+        if parallel:
+            njobs = min(self.reps, psutil.cpu_count() - 1)
+            args_list = [[detector, stream, rep, warm_start] for rep in range(self.reps)]
+            dfs = run_async(self.evaluate_algorithm, args_list=args_list, njobs=njobs)
+        else:
+            dfs = []
+            for rep in range(self.reps):
+                dfs.append(self.evaluate_algorithm(detector, stream, rep=rep, warm_start=warm_start))
+        df = pd.concat(dfs, axis=0, ignore_index=True)
+        df.to_csv(new_filepath_in_experiment_with_name(self.name), index=False)
 
-    def evaluate_algorithm(self, detector: DriftDetector, stream: ChangeStream, rep: int, warm_start: int = 100):
-        stream.restart()
-        logger.track_rep(rep)
+    def evaluate_algorithm(self, detector: DriftDetector, stream: ChangeStream,
+                           rep: int, warm_start: int = 100) -> pd.DataFrame:
+        logger = ExperimentLogger()
+        if isinstance(detector, ABCD):
+            detector.set_logger(logger)
         logger.track_approach_information(detector.name(), detector.parameter_str())
         logger.track_dataset_name(stream.id())
         logger.track_stream_type(stream.type())
+
+        stream.restart()
 
         # Warm start
         if warm_start > 0:
@@ -66,6 +79,7 @@ class Experiment:
         while stream.has_more_samples():
             logger.track_time()
             logger.track_index(stream.sample_idx)
+            logger.track_rep(rep)
             next_sample, _, is_change = stream.next_sample()
             logger.track_is_change(is_change)
             if isinstance(stream, GradualChangeStream):
@@ -93,3 +107,4 @@ class Experiment:
             if rount_time - start_time > self.algorithm_timeout:
                 print("{} with {} on {} timed out!".format(detector.name(), detector.parameter_str(), stream.id()))
                 break
+        return logger.get_dataframe()

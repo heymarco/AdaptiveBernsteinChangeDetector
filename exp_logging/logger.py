@@ -95,13 +95,10 @@ class ExperimentLogger:
         self._data.append(self._current_row)
         self._current_row = [np.nan for _ in range(len(self._columns))]
 
-    def save(self, path=os.path.join(os.getcwd(), "results", "result.csv"), append: bool = False):
+    def get_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame(self._data, columns=self._columns)
-        if not append:
-            df.to_csv(path, index=False)
-        else:
-            df.to_csv(path, mode='a', header=not os.path.exists(path))
         self._reset()
+        return df
 
     def track_windowing(self, n1, n2, s1, s2, eps, p, safe_index):
         self.track_w1(n1)

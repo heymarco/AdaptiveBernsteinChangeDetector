@@ -1,6 +1,6 @@
 import numpy as np
 from components.std import PairwiseVariance
-from exp_logging.logger import logger
+from exp_logging.logger import ExperimentLogger
 
 
 def epsilon_cut_hoeffding(card_w1, card_w2, delta: float):
@@ -64,10 +64,14 @@ class AdaptiveWindow:
         self.variance_tracker = PairwiseVariance(max_size=max_size)
         self.max_size = max_size
         self.split_type = split_type
+        self.logger = None
         self._cut_indices = []
 
     def __len__(self):
         return len(self.w)
+
+    def set_logger(self, l: ExperimentLogger):
+        self.logger = l
 
     def grow(self, new_item):
         """
@@ -217,7 +221,7 @@ class AdaptiveWindow:
         eps = epsilon[self.argmin_p_value]
         s1, s2 = sigma[self.argmin_p_value]
         safe_index = self.n_seen_items - len(self.w) + self._cut_index()
-        logger.track_windowing(n1, n2, s1, s2, eps, np.min(delta_empirical), safe_index)
+        self.logger.track_windowing(n1, n2, s1, s2, eps, np.min(delta_empirical), safe_index)
 
         if has_change:
             self._last_split_index = self._cut_index()
