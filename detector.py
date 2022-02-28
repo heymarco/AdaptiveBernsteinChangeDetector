@@ -120,5 +120,5 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         mean_old, mean_new = agg.mean()
         std_old, _ = agg.std()
         z_score_normalized = np.abs(mean_new - mean_old) / std_old
-        self._severity = z_score_normalized
+        self._severity = float(z_score_normalized)
 

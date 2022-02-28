@@ -214,14 +214,15 @@ class AdaptiveWindow:
         self.min_p_value = np.min(delta_empirical)
         self.argmin_p_value = np.argmin(delta_empirical)
         d = self.delta_bonferroni() if self.bonferroni else self.delta
-        has_change = self.min_p_value < self.delta_bonferroni()
+        has_change = self.min_p_value < d
 
         # Logging:
-        n1, n2 = pairwise_n[self.argmin_p_value]
-        eps = epsilon[self.argmin_p_value]
-        s1, s2 = sigma[self.argmin_p_value]
-        safe_index = self.n_seen_items - len(self.w) + self._cut_index()
-        self.logger.track_windowing(n1, n2, s1, s2, eps, np.min(delta_empirical), safe_index)
+        # n1, n2 = pairwise_n[self.argmin_p_value]
+        # eps = epsilon[self.argmin_p_value]
+        # s1, s2 = sigma[self.argmin_p_value]
+        # safe_index = self.n_seen_items - len(self.w) + self._cut_index()
+        # self.logger.track_windowing(n1, n2, s1, s2, eps, np.min(delta_empirical), safe_index)
+        # commenting out -> we don't need it for the final experiments.
 
         if has_change:
             self._last_split_index = self._cut_index()

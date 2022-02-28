@@ -85,17 +85,19 @@ def compute_severity_metric(df: pd.DataFrame):
     changes = df["change-point"]
     idxs = [i for i, change in enumerate(changes) if change]
     severities = df["severity-gt"].loc[idxs]
-    detected_severities = df[not df["severity"].isnull()]["severity"]
-    results = []
-    for i, s in enumerate(severities):
-        for j, d in enumerate(detected_severities):
-            if d.index < s.index:
+    detected_severities = df["severity"][np.invert(df["severity"].isnull())]
+    x = []
+    y = []
+    for i, s in zip(severities.index, severities.to_list()):
+        for j, d in zip(detected_severities.index, detected_severities.to_list()):
+            if j < i:
                 continue
-            s = str_to_arr(s, dtype=float)
-            d = str_to_arr(d, dtype=float)
-            corr, p = spearmanr(s, d)
-            results.append(corr)
-    return np.nanmean(results)
+            s = str_to_arr(s, dtype=float)[0]
+            x.append(s)
+            y.append(d)
+            break
+    corr, p = spearmanr(x, y)
+    return corr
 
 
 if __name__ == '__main__':
@@ -106,8 +108,8 @@ if __name__ == '__main__':
     j = 0
     for file in tqdm(all_files):
         j += 1
-        # if j > 10:
-        #     break
+        if j > 10:
+            break
         df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes().ffill()
         approach = np.unique(df["approach"])[0]
         params = np.unique(df["parameters"])[0]

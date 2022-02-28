@@ -11,12 +11,8 @@ ename = "synthetic"
 
 if __name__ == '__main__':
     parameter_choices = {
-        ABCD: {"encoding_factor": [0.3,  # 0.5, 0.7
-                                   ], "delta": [0.1,  # 0.05, 0.01
-                                                ], "update_epochs": [20,  # 50, 100
-                                                                     ]},
-        AdwinK: {"k": [0.01,  # 0.02, 0.05, 0.1, 0.2
-                       ], "delta": [0.05]},
+        ABCD: {"encoding_factor": [0.3, 0.5, 0.7], "delta": [0.1, 0.05, 0.01], "update_epochs": [20, 50, 100]},
+        AdwinK: {"k": [0.01, 0.02, 0.05, 0.1, 0.2], "delta": [0.05]},
     }
 
     algorithms = {
@@ -24,8 +20,8 @@ if __name__ == '__main__':
     }
 
     n_per_concept = 1000
-    n_concepts = 3
-    n_reps = 3
+    n_concepts = 21
+    n_reps = 10
     n_dims = 100
     steps = 5
     datasets = []
