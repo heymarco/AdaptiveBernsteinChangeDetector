@@ -1,4 +1,3 @@
-import multiprocessing
 import time
 
 import numpy as np
@@ -61,6 +60,7 @@ class Experiment:
         logger.track_approach_information(detector.name(), detector.parameter_str())
         logger.track_dataset_name(stream.id())
         logger.track_stream_type(stream.type())
+        logger.track_rep(rep)
 
         stream.restart()
 
@@ -76,12 +76,15 @@ class Experiment:
         i = 0
         change_count = 0
         start_time = time.perf_counter()
+        is_first_round = True
         while stream.has_more_samples():
             logger.track_time()
-            logger.track_index(stream.sample_idx)
-            logger.track_rep(rep)
+            if is_first_round:
+                logger.track_index(stream.sample_idx)
+                is_first_round = False
             next_sample, _, is_change = stream.next_sample()
-            logger.track_is_change(is_change)
+            if is_change:
+                logger.track_is_change(is_change)
             if isinstance(stream, GradualChangeStream):
                 logger.track_drift_length(stream.drift_lengths()[change_count])
             if i == 0:
