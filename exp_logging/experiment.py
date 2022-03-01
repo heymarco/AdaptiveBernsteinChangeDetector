@@ -95,9 +95,9 @@ class Experiment:
                 if isinstance(stream, QuantifiesSeverity):
                     logger.track_drift_severity_grount_truth(stream.get_severity())
             detector.add_element(next_sample)
-            logger.track_change_point(detector.detected_change())
             logger.track_metric(detector.metric())
             if detector.detected_change():
+                logger.track_change_point(True)
                 logger.track_delay(detector.delay)
                 if isinstance(detector, QuantifiesSeverity):
                     logger.track_drift_severity(detector.get_severity())

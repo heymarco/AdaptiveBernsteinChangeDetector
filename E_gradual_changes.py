@@ -32,12 +32,12 @@ if __name__ == '__main__':
     stretch = True
     n_reps = 10
     datasets = [
-        GradualGasSensors(num_concepts=n_concepts, drift_length=drift_length, stretch=stretch, preprocess=preprocess),
-        GradualHAR(num_concepts=n_concepts, drift_length=drift_length, stretch=stretch, preprocess=preprocess),
-        GradualLED(num_concepts=n_concepts, n_per_concept=n_per_concept, drift_length=drift_length,
-                   stretch=stretch, preprocess=preprocess),
-        GradualRBF(num_concepts=n_concepts, n_per_concept=n_per_concept, drift_length=drift_length,
-                   stretch=stretch, preprocess=preprocess),
+        # GradualGasSensors(num_concepts=n_concepts, drift_length=drift_length, stretch=stretch, preprocess=preprocess),
+        # GradualHAR(num_concepts=n_concepts, drift_length=drift_length, stretch=stretch, preprocess=preprocess),
+        # GradualLED(num_concepts=n_concepts, n_per_concept=n_per_concept, drift_length=drift_length,
+        #            stretch=stretch, preprocess=preprocess),
+        # GradualRBF(num_concepts=n_concepts, n_per_concept=n_per_concept, drift_length=drift_length,
+        #            stretch=stretch, preprocess=preprocess),
         GradualMNIST(num_concepts=n_concepts, stretch=stretch, drift_length=drift_length, preprocess=preprocess),
         GradualFashionMNIST(num_concepts=n_concepts, stretch=stretch, drift_length=drift_length, preprocess=preprocess),
         GradualCifar10(num_concepts=n_concepts, stretch=stretch, drift_length=drift_length, preprocess=preprocess),
