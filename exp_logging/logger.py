@@ -9,7 +9,7 @@ import numpy as np
 class ExperimentLogger:
 
     def __init__(self,
-                 columns: list = ["rep", "approach", "parameters", "dataset", "time", "metric", "p", "change-point", "is-change", "delay", "eps", "ndims", "dims-gt", "dims-found",
+                 columns: list = ["rep", "approach", "parameters", "dataset", "time", "metric", "p", "change-point", "is-change", "delay", "ndims", "dims-gt", "dims-found",
                                   "drift-type", "drift-length", "severity-gt", "severity"]):
         self._data = []
         self._columns = columns
