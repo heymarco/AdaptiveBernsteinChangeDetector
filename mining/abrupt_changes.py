@@ -4,7 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from changeds.metrics import *
-from util import get_last_experiment_dir, str_to_arr
+from util import get_last_experiment_dir, str_to_arr, fill_df
 from E_abrupt_changes import ename
 
 
@@ -41,7 +41,8 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
         j += 1
         # if j < 270 or j > 280:
         #     continue
-        df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes().ffill()
+        df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes()
+        df = fill_df(df)
         approach = np.unique(df["approach"])[0]
         params = np.unique(df["parameters"])[0]
         dataset = np.unique(df["dataset"])[0]

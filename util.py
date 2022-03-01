@@ -3,6 +3,7 @@ from multiprocessing import Pool
 from time import sleep
 
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 
@@ -81,3 +82,11 @@ def run_async(function, args_list, njobs, sleep_time_s=0.1):
     pool.close()
     return results
 
+
+def fill_df(df: pd.DataFrame) -> pd.DataFrame:
+    df.fillna(value={"is-change": False,
+                     "change-point": False,
+                     "severity": 0.0  # changes that were not detected are of 0 severity
+                     }, inplace=True)
+    df.ffill(inplace=True)
+    return df

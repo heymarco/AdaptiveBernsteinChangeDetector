@@ -17,7 +17,7 @@ class Experiment:
                  name: str,
                  configurations: dict,
                  datasets: list,
-                 algorithm_timeout: float = 30 * 60,  # 15 minutes
+                 algorithm_timeout: float = 30 * 60,  # 30 minutes
                  reps: int = 1):
         self.name = name
         self.configurations = configurations
@@ -76,12 +76,8 @@ class Experiment:
         i = 0
         change_count = 0
         start_time = time.perf_counter()
-        is_first_round = True
         while stream.has_more_samples():
             logger.track_time()
-            if is_first_round:
-                logger.track_index(stream.sample_idx)
-                is_first_round = False
             next_sample, _, is_change = stream.next_sample()
             if is_change:
                 logger.track_is_change(is_change)

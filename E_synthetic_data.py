@@ -11,8 +11,7 @@ ename = "synthetic"
 
 if __name__ == '__main__':
     parameter_choices = {
-        ABCD: {"encoding_factor": [0.3, 0.5, 0.7], "delta": [0.1, 0.05, 0.01], "update_epochs": [20, 50, 100]},
-        AdwinK: {"k": [0.01, 0.02, 0.05, 0.1, 0.2], "delta": [0.05]},
+        ABCD: {"encoding_factor": [0.3, 0.5, 0.7], "delta": [0.05, 0.01], "update_epochs": [20, 50, 100]},
     }
 
     algorithms = {
@@ -23,7 +22,7 @@ if __name__ == '__main__':
     n_concepts = 21
     n_reps = 10
     n_dims = 100
-    steps = 5
+    steps = 10
     datasets = []
     for n in range(steps):
         dims_drift = int(n_dims - (n * n_dims / steps))
