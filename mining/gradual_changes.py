@@ -4,7 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from changeds.metrics import *
-from util import get_last_experiment_dir, str_to_arr
+from util import get_last_experiment_dir, str_to_arr, fill_df
 from E_gradual_changes import ename
 
 
@@ -41,7 +41,8 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
         j += 1
         # if j > 10:
         #     break
-        df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes().ffill()
+        df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes()
+        df = fill_df(df)
         approach = np.unique(df["approach"])[0]
         params = np.unique(df["parameters"])[0]
         dataset = np.unique(df["dataset"])[0]
@@ -105,14 +106,17 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
     max_indices = []
     indices = []
     for _, gdf in df.groupby(["Dataset", "Approach"]):
+        gdf = gdf.dropna()
+        if len(gdf) == 0:
+            continue
         max_index = gdf["F1"].idxmax()
         indices.append(max_index)
         if "ABCD2" in gdf["Approach"].to_numpy():
             max_indices.append(max_index)
             if median:
-                med = gdf["F1"].median()
+                med = gdf["F1"].dropna().median()
                 median_index = (gdf["F1"] - med).abs().idxmin()
-                if median_index == max_index:
+                if median_index == max_index and len(gdf) > 1:  # second clause should be particularly relevant for testing.
                     median_index = (gdf["F1"] - med).abs().drop(max_index).idxmin()
                 median_indices.append(median_index)
             if worst:

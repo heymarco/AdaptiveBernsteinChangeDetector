@@ -9,9 +9,7 @@ import numpy as np
 class ExperimentLogger:
 
     def __init__(self,
-                 columns: list = ["rep", "approach", "parameters", "dataset", "data-index", "time", "metric",
-                                  "safe-index", "p", "change-point", "is-change", "delay", "w1", "w2",
-                                  "sigma1", "sigma2", "eps", "accuracy", "ndims", "dims-gt", "dims-found",
+                 columns: list = ["rep", "approach", "parameters", "dataset", "time", "metric", "p", "change-point", "is-change", "delay", "eps", "ndims", "dims-gt", "dims-found",
                                   "drift-type", "drift-length", "severity-gt", "severity"]):
         self._data = []
         self._columns = columns
@@ -33,9 +31,6 @@ class ExperimentLogger:
 
     def track_metric(self, metric):
         self._track_value(metric, "metric")
-
-    def track_index(self, index):
-        self._track_value(index, "data-index")
 
     def track_safe_index(self, index):
         self._track_value(index, "safe-index")
@@ -66,9 +61,6 @@ class ExperimentLogger:
 
     def track_eps(self, eps):
         self._track_value(eps, "eps")
-
-    def track_accuracy(self, acc):
-        self._track_value(acc, "accuracy")
 
     def track_ndims(self, ndims):
         self._track_value(ndims, "ndims")
