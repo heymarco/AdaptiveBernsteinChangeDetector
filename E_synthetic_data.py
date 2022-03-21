@@ -22,7 +22,7 @@ if __name__ == '__main__':
     n_concepts = 21
     n_reps = 10
     n_dims = 100
-    steps = 10
+    steps = 4
     datasets = []
     for n in range(steps):
         dims_drift = int(n_dims - (n * n_dims / steps))
@@ -35,5 +35,6 @@ if __name__ == '__main__':
                       dims_drift=dims_drift, dims_no_drift=dims_no_drift, variance_drift=True, preprocess=preprocess)
         datasets += [hs, gm, gv]
 
-    experiment = Experiment(name=ename, configurations=algorithms, datasets=datasets, reps=n_reps)
+    experiment = Experiment(name=ename, configurations=algorithms, datasets=datasets,
+                            reps=n_reps, condense_results=True)
     experiment.run(warm_start=100)

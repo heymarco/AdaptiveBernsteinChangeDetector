@@ -17,13 +17,15 @@ class Experiment:
                  name: str,
                  configurations: dict,
                  datasets: list,
-                 algorithm_timeout: float = 30 * 60,  # 30 minutes
-                 reps: int = 1):
+                 algorithm_timeout: float = 10 * 60,  # 30 minutes
+                 reps: int = 1,
+                 condense_results: bool = False):
         self.name = name
         self.configurations = configurations
         self.datasets = datasets
         self.algorithm_timeout = algorithm_timeout
         self.reps = reps
+        self.condense_results = condense_results
         new_dir_for_experiment_with_name(name)
         all_configs = []
         for conf in self.configurations.values():
@@ -50,7 +52,14 @@ class Experiment:
             for rep in range(self.reps):
                 dfs.append(self.evaluate_algorithm(detector, stream, rep=rep, warm_start=warm_start))
         df = pd.concat(dfs, axis=0, ignore_index=True)
-        df.to_csv(new_filepath_in_experiment_with_name(self.name), index=False)
+        if self.condense_results:
+            empty_rep = df["rep"].isna() == False
+            empty_is_change = df["is-change"].isna() == False
+            is_change_point = df["change-point"]
+            bool_arr = np.logical_or(empty_rep, empty_is_change)
+            bool_arr = np.logical_or(bool_arr, is_change_point)
+            df = df.loc[bool_arr]
+        df.to_csv(new_filepath_in_experiment_with_name(self.name), index=True)
 
     def evaluate_algorithm(self, detector: DriftDetector, stream: ChangeStream,
                            rep: int, warm_start: int = 100) -> pd.DataFrame:
