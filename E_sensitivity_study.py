@@ -25,8 +25,8 @@ if __name__ == '__main__':
 
     n_per_concept = 1000
     num_concepts = 21
-    n_reps = 1
-    n_dims = [10, 50, 100, 150, 250, 500]
+    n_reps = 10
+    n_dims = [10, 50, 100, 250, 500]
     datasets = [
         RBF(num_concepts=num_concepts, n_per_concept=1000, dims=int(d / 2), add_dims_without_drift=True, random_state=i, preprocess=preprocess)
         for i, d in enumerate(n_dims)
