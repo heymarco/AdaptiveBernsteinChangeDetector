@@ -33,19 +33,21 @@ if __name__ == '__main__':
     ]
     datasets += [
         Hypersphere(num_concepts=num_concepts, n_per_concept=n_per_concept, dims_drift=d,
-                    dims_no_drift=0, preprocess=preprocess)
+                    dims_no_drift=d, preprocess=preprocess)
         for d in n_dims
     ]
     datasets += [
         Gaussian(num_concepts=num_concepts, n_per_concept=n_per_concept,
-                 dims_drift=d, dims_no_drift=0, variance_drift=True, preprocess=preprocess)
+                 dims_drift=d, dims_no_drift=d, variance_drift=True, preprocess=preprocess)
         for d in n_dims
     ]
     datasets += [
         Gaussian(num_concepts=num_concepts, n_per_concept=n_per_concept,
-                 dims_drift=d, dims_no_drift=0, variance_drift=False, preprocess=preprocess)
+                 dims_drift=d, dims_no_drift=d, variance_drift=False, preprocess=preprocess)
         for d in n_dims
     ]
 
-    experiment = Experiment(name=ename, configurations=algorithms, datasets=datasets, reps=n_reps)
+    experiment = Experiment(name=ename, configurations=algorithms,
+                            datasets=datasets, reps=n_reps,
+                            condense_results=True, algorithm_timeout=60)  # one minute
     experiment.run(warm_start=100)
