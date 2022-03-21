@@ -23,7 +23,7 @@ if __name__ == '__main__':
         alg: list(ParameterGrid(param_grid=parameter_choices[alg])) for alg in parameter_choices
     }
 
-    n_per_concept = 2000
+    n_per_concept = 1000
     num_concepts = 21
     n_reps = 1
     n_dims = [10, 50, 100, 150, 250, 500]
