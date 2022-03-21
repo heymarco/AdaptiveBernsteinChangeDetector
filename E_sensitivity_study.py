@@ -1,6 +1,6 @@
 from sklearn.model_selection import ParameterGrid
 
-from changeds import RandomOrderHAR, LED, RBF, RandomOrderMNIST, RandomOrderFashionMNIST, RandomOrderCIFAR10, GasSensors
+from changeds import RBF, Gaussian, Hypersphere
 
 from detector import ABCD
 
@@ -15,7 +15,8 @@ if __name__ == '__main__':
     parameter_choices = {
         ABCD: {"encoding_factor": [(i + 1) / 10 for i in range(9)],
                "delta": [0.05],
-               "update_epochs": [10, 20, 50, 100, 200]},
+               "update_epochs": [10, 20, 50, 100, 200],
+               "split_type": ["exp", "all"]},
     }
 
     algorithms = {
@@ -23,16 +24,27 @@ if __name__ == '__main__':
     }
 
     n_per_concept = 2000
-    n_drifts = 30
+    num_concepts = 21
     n_reps = 1
+    n_dims = [10, 50, 100, 150, 250, 500]
     datasets = [
-        GasSensors(num_changes=n_drifts, preprocess=preprocess),
-        LED(n_per_concept=n_per_concept, n_drifts=n_drifts, preprocess=preprocess),
-        RBF(n_per_concept=n_per_concept, n_drifts=n_drifts, preprocess=preprocess),
-        RandomOrderHAR(num_changes=n_drifts, preprocess=preprocess),
-        RandomOrderMNIST(num_changes=n_drifts, preprocess=preprocess),
-        RandomOrderFashionMNIST(num_changes=n_drifts, preprocess=preprocess),
-        RandomOrderCIFAR10(num_changes=n_drifts, preprocess=preprocess)
+        RBF(num_concepts=num_concepts, n_per_concept=1000, dims=int(d / 2), add_dims_without_drift=True, random_state=i, preprocess=preprocess)
+        for i, d in enumerate(n_dims)
+    ]
+    datasets += [
+        Hypersphere(num_concepts=num_concepts, n_per_concept=n_per_concept, dims_drift=d,
+                    dims_no_drift=0, preprocess=preprocess)
+        for d in n_dims
+    ]
+    datasets += [
+        Gaussian(num_concepts=num_concepts, n_per_concept=n_per_concept,
+                 dims_drift=d, dims_no_drift=0, variance_drift=True, preprocess=preprocess)
+        for d in n_dims
+    ]
+    datasets += [
+        Gaussian(num_concepts=num_concepts, n_per_concept=n_per_concept,
+                 dims_drift=d, dims_no_drift=0, variance_drift=False, preprocess=preprocess)
+        for d in n_dims
     ]
 
     experiment = Experiment(name=ename, configurations=algorithms, datasets=datasets, reps=n_reps)

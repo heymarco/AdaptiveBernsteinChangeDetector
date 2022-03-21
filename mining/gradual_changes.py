@@ -1,11 +1,20 @@
 import os
 
 import pandas as pd
+from matplotlib import pyplot as plt
 from tqdm import tqdm
+import seaborn as sns
 
 from changeds.metrics import *
-from util import get_last_experiment_dir, str_to_arr, fill_df
+from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, \
+    get_abcd_hyperparameters_from_str
 from E_gradual_changes import ename
+
+import matplotlib as mpl
+mpl.rcParams['text.usetex'] = True
+mpl.rcParams['text.latex.preamble'] = r'\usepackage[T1]{fontenc}'
+mpl.rcParams['text.latex.preamble'] = r'\usepackage{nicefrac}'
+mpl.rc('font', family='serif')
 
 
 def compute_jaccard(df: pd.DataFrame):
@@ -27,6 +36,16 @@ def compute_jaccard(df: pd.DataFrame):
     return np.nanmean(results) if len(results) > 0 else np.nan
 
 
+def add_params_to_df(row):
+    if row["Approach"] != "ABCD2":
+        return row
+    params = get_abcd_hyperparameters_from_str(row["Parameters"])
+    _, E, eta, _ = params
+    row[r"$\eta$"] = eta
+    row["E"] = E
+    return row
+
+
 def mean_time_per_example(df):
     series = df["time"]
     return series.diff().mean()
@@ -35,60 +54,83 @@ def mean_time_per_example(df):
 def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}):
     last_exp_dir = get_last_experiment_dir(ename)
     all_files = os.listdir(last_exp_dir)
-    result_df = []
-    j = 0
-    for file in tqdm(all_files):
-        j += 1
-        # if j > 10:
-        #     break
-        df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes()
-        df = fill_df(df)
-        approach = np.unique(df["approach"])[0]
-        params = np.unique(df["parameters"])[0]
-        dataset = np.unique(df["dataset"])[0]
-        dims = np.unique(df["ndims"])[0]
-        for rep, rep_data in df.groupby("rep"):
-            true_cps = [i for i in range(len(rep_data)) if rep_data["is-change"].iloc[i]]
-            cp_distance = true_cps[0]
-            n_seen_changes = len(true_cps)
-            reported_cps = [i for i in range(len(rep_data)) if rep_data["change-point"].iloc[i]]
-            tp = true_positives(true_cps, reported_cps, cp_distance)
-            fp = false_positives(true_cps, reported_cps, cp_distance)
-            fn = false_negatives(true_cps, reported_cps, cp_distance)
-            prec = precision(tp, fp, fn)
-            rec = recall(tp, fp, fn)
-            f1 = fb_score(true_cps, reported_cps, T=2000)
-            mttd = mean_until_detection(true_cps, reported_cps)
-            jac = compute_jaccard(rep_data)
-            mtpe = mean_time_per_example(rep_data)
-            mtpe = mtpe / 10e6
-            rcd = ratio_changes_detected(true_cps, reported_cps)
-            result_df.append([
-                dataset, dims, approach, params, f1, prec, rec, rcd,
-                jac, mttd, mtpe, n_seen_changes
-            ])
-    result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "F1", "Prec.",
-                                                 "Rec.", "RCD", "Jaccard", "MTTD", "MTPO [ms]", "PC"])
+    cache_dir = create_cache_dir_if_needed(last_exp_dir)
+    df_cpy = False
+    if os.path.exists(os.path.join(cache_dir, "cached.csv")):
+        result_df = pd.read_csv(os.path.join(cache_dir, "cached.csv"))
+    else:
+        result_df = []
+        j = 0
+        for file in tqdm(all_files):
+            if not file.endswith(".csv"):
+                continue
+            j += 1
+            # if j > 2:
+            #     break
+            df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes()
+            df = fill_df(df)
+            approach = np.unique(df["approach"])[0]
+            params = np.unique(df["parameters"])[0]
+            dataset = np.unique(df["dataset"])[0]
+            dims = np.unique(df["ndims"])[0]
+            for rep, rep_data in df.groupby("rep"):
+                true_cps = [i for i in range(len(rep_data)) if rep_data["is-change"].iloc[i]]
+                cp_distance = true_cps[1] - true_cps[0]
+                n_seen_changes = len(true_cps)
+                reported_cps = [i for i in range(len(rep_data)) if rep_data["change-point"].iloc[i]]
+                delays = rep_data["delay"].iloc[reported_cps].tolist()
+                tp = true_positives(true_cps, reported_cps, cp_distance)
+                fp = false_positives(true_cps, reported_cps, cp_distance)
+                fn = false_negatives(true_cps, reported_cps, cp_distance)
+                prec = precision(tp, fp, fn)
+                rec = recall(tp, fp, fn)
+                f1 = fb_score(true_cps, reported_cps, T=2000)
+                mttd = mean_until_detection(true_cps, reported_cps)
+                mae_delay = change_point_mae(true_cps, reported_cps, delays)
+                jac = compute_jaccard(rep_data)
+                mtpe = mean_time_per_example(rep_data)
+                mtpe = mtpe / 10e6
+                rcd = ratio_changes_detected(true_cps, reported_cps)
+                result_df.append([
+                    dataset, dims, approach, params, f1, prec, rec, rcd,
+                    jac, mttd, mtpe, n_seen_changes, mae_delay
+                ])
+        result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "F1", "Prec.",
+                                                     "Rec.", "RCD", "Jaccard", "MTTD", "MTPO [ms]", "PC", "CP-MAE"])
+        df_cpy = result_df.copy()
+    result_df = result_df[["Dataset", "Dims", "Approach", "Parameters", "F1", "Prec.", "Rec.", "RCD", "MTTD", "MTPO [ms]"]]
     result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
     if print_summary:
         summary = filter_best(result_df, **summary_kwargs)
     result_df = result_df.round(decimals={
-        "F1": 2, "Prec.": 2, "Rec.": 2, "RCD": 2, "Jaccard": 2, "MTPO [ms]": 3, "MTTD": 1
+        "F1": 2, "Prec.": 2, "Rec.": 2, "RCD": 2, "MTPO [ms]": 3, "MTTD": 1
     })
     result_df[result_df["Dataset"] == "Average"] = 0
-    sort_by = ["Dataset", "Dims", "Approach", "Parameters"]
+    sort_by = ["Dims", "Dataset", "Approach", "Parameters"]
     result_df = result_df.sort_values(by=sort_by)
-    result_df.drop(["Jaccard", "Parameters", "Dims"], axis=1, inplace=True)
-    result_df["PC"] = result_df["PC"].astype(int)
-    print(result_df.set_index(["Dataset", "Approach"]).to_latex(escape=False))
+    result_df = result_df.apply(func=add_params_to_df, axis=1)
     if print_summary:
         summary = summary.round(decimals={
-            "F1": 2, "Prec.": 2, "Rec.": 2, "RCD": 2, "Jaccard": 2, "MTPO [ms]": 3, "MTTD": 1
+            "F1": 2, "Prec.": 2, "Rec.": 2, "RCD": 2, "MTPO [ms]": 3, "MTTD": 1
         })
         summary = summary.sort_values(by=sort_by)
-        summary.drop(["Jaccard", "Parameters", "Dims"], axis=1, inplace=True)
-        summary["PC"] = summary["PC"].astype(int)
+        summary.drop(["Parameters", "Dims"], axis=1, inplace=True)
         print(summary.set_index(["Dataset", "Approach"]).to_latex(escape=False))
+    abcd = result_df[result_df["Approach"] == "ABCD2"]
+    abcd["E"] = abcd["E"].astype(int)
+    g = sns.catplot(x="E", y="F1",
+                    hue=r"$\eta$", col="Dataset",
+                    data=abcd, kind="strip", palette=sns.cubehelix_palette(n_colors=3),
+                    height=2, aspect=.5, s=4)
+    axes = plt.gcf().axes
+    for ax in axes:
+        current_title = ax.get_title()
+        dataset = current_title.split(" = ")[1]
+        ax.set_title(dataset)
+    plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study.pdf"))
+    plt.show()
+    if isinstance(df_cpy, pd.DataFrame):
+        df_cpy.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
 
 
 def add_mean_column(df: pd.DataFrame):

@@ -90,3 +90,26 @@ def fill_df(df: pd.DataFrame) -> pd.DataFrame:
                      }, inplace=True)
     df.ffill(inplace=True)
     return df
+
+
+def create_cache_dir_if_needed(result_dir):
+    cache_dir = os.path.join(result_dir, "cache")
+    if not os.path.exists(cache_dir):
+        os.mkdir(cache_dir)
+    return cache_dir
+
+
+def get_abcd_hyperparameters_from_str(string: str):
+    # example param string: "$\delta = 0.05, E = 20, \eta = 0.3, bc = True$"
+    string = string.replace("$", "")
+    param_strings = string.split(sep=", ")
+    params = []
+    for s in param_strings:
+        s = s.split(" = ")[-1]
+        try:
+            params.append(float(s))
+        except:
+            print("Could not parse input {} to float".format(s))
+            params.append(np.nan)
+    return params
+

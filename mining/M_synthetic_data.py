@@ -8,7 +8,7 @@ from scipy.stats import spearmanr
 from tqdm import tqdm
 
 from E_synthetic_data import ename
-from util import get_last_experiment_dir, str_to_arr, fill_df
+from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed
 
 
 def add_mean_column(df: pd.DataFrame):
@@ -93,7 +93,7 @@ def compute_severity_metric(df: pd.DataFrame):
     y = []
     for i, s in zip(severities.index, severities.to_list()):
         for j, d in zip(detected_severities.index, detected_severities.to_list()):
-            if pd.isna(s):  # TODO: Find out why this even happenes
+            if pd.isna(s):  # TODO: Find out why this even happens
                 continue
             if j < i:
                 continue
@@ -109,31 +109,37 @@ if __name__ == '__main__':
     print_summary = True
     last_exp_dir = get_last_experiment_dir(ename)
     all_files = os.listdir(last_exp_dir)
-    result_df = []
-    j = 0
-    for file in tqdm(all_files):
-        j += 1
-        if j > 10:
-            break
-        df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes()
-        df = fill_df(df)
-        approach = np.unique(df["approach"])[0]
-        params = np.unique(df["parameters"])[0]
-        dataset = np.unique(df["dataset"])[0]
-        dims = np.unique(df["ndims"])[0]
-        for rep, rep_data in df.groupby("rep"):
-            true_cps = [i for i in range(len(rep_data)) if rep_data["is-change"].iloc[i]]
-            cp_distance = true_cps[0]
-            n_seen_changes = len(true_cps)
-            reported_cps = [i for i in range(len(rep_data)) if rep_data["change-point"].iloc[i]]
-            jac, region_prec, region_rec = compute_region_metrics(rep_data)
-            f1_region = 2 * (region_prec * region_prec) / (region_rec + region_prec)
-            severity = compute_severity_metric(df)
-            result_df.append([
-                dataset, dims, approach, params, f1_region, region_prec, region_rec, jac, severity
-            ])
-    result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "F1 (Region)", "Prec. (Region)",
-                                                 "Rec. (Region)", "Jaccard", "Sp. Corr."])
+    cache_dir = create_cache_dir_if_needed(last_exp_dir)
+    if os.path.exists(os.path.join(cache_dir, "cached.csv")):
+        print("Use cache")
+        result_df = pd.read_csv(os.path.join(cache_dir, "cached.csv"))
+    else:
+        result_df = []
+        j = 0
+        for file in tqdm(all_files):
+            j += 1
+            # if j > 10:
+            #     break
+            df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes()
+            df = fill_df(df)
+            approach = np.unique(df["approach"])[0]
+            params = np.unique(df["parameters"])[0]
+            dataset = np.unique(df["dataset"])[0]
+            dims = np.unique(df["ndims"])[0]
+            for rep, rep_data in df.groupby("rep"):
+                true_cps = [i for i in range(len(rep_data)) if rep_data["is-change"].iloc[i]]
+                cp_distance = true_cps[0]
+                n_seen_changes = len(true_cps)
+                reported_cps = [i for i in range(len(rep_data)) if rep_data["change-point"].iloc[i]]
+                jac, region_prec, region_rec = compute_region_metrics(rep_data)
+                f1_region = 2 * (region_prec * region_prec) / (region_rec + region_prec)
+                severity = compute_severity_metric(df)
+                result_df.append([
+                    dataset, dims, approach, params, f1_region, region_prec, region_rec, jac, severity
+                ])
+        result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "F1 (Region)", "Prec. (Region)",
+                                                     "Rec. (Region)", "Jaccard", "Sp. Corr."])
+        result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
     result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
     if print_summary:
         summary = filter_best(result_df, median=True, worst=False)
@@ -144,7 +150,9 @@ if __name__ == '__main__':
     sort_by = ["Dataset", "Dims", "Approach", "Parameters"]
     result_df = result_df.sort_values(by=sort_by)
     result_df.drop(["Parameters", "Dims"], axis=1, inplace=True)
-    print(result_df.set_index(["Dataset", "Approach"]).to_latex(escape=False))
+    print(result_df.groupby(["Dataset"]).mean().round(
+        decimals={"F1 (Region)": 2, "Prec. (Region)": 2, "Rec. (Region)": 2, "Jaccard": 2, "Sp. Corr.": 2}
+    ).to_latex())
     if print_summary:
         summary = summary.round(decimals={
             "F1 (Region)": 2, "Prec. (Region)": 2, "Rec. (Region)": 2, "Jaccard": 2, "Sp. Corr.": 2
