@@ -15,7 +15,7 @@ if __name__ == '__main__':
     parameter_choices = {
         ABCD: {"encoding_factor": [0.3, 0.5, 0.7],
                "delta": [1E-10],
-               "update_epochs": [20, 50, 100],
+               "update_epochs": [50],
                "split_type": ["exp", "all"]},
     }
 
@@ -23,7 +23,7 @@ if __name__ == '__main__':
         alg: list(ParameterGrid(param_grid=parameter_choices[alg])) for alg in parameter_choices
     }
 
-    n_per_concept = 3000
+    n_per_concept = 5000
     num_concepts = 1
     n_reps = 10
     n_dims = [10, 100, 1000]
@@ -35,5 +35,5 @@ if __name__ == '__main__':
 
     experiment = Experiment(name=ename, configurations=algorithms,
                             datasets=datasets, reps=n_reps,
-                            condense_results=True, algorithm_timeout=5 * 60)  # one minute
+                            condense_results=False, algorithm_timeout=5 * 60)  # one minute
     experiment.run(warm_start=100)
