@@ -13,9 +13,10 @@ ename = "sensitivity_study"
 
 if __name__ == '__main__':
     parameter_choices = {
-        ABCD: {"encoding_factor": [(i + 1) / 10 for i in range(9)],
+        ABCD: {"encoding_factor": [0.3, 0.5, 0.7],
                "delta": [0.05],
-               "update_epochs": [10, 20, 50, 100, 200],
+               "update_epochs": [20, 50, 100],
+               "bonferroni": [True, False],
                "split_type": ["exp", "all"]},
     }
 
@@ -23,12 +24,13 @@ if __name__ == '__main__':
         alg: list(ParameterGrid(param_grid=parameter_choices[alg])) for alg in parameter_choices
     }
 
-    n_per_concept = 1000
+    n_per_concept = 2000
     num_concepts = 21
     n_reps = 10
-    n_dims = [10, 50, 100, 250, 500]
+    n_dims = [5, 50, 500]
     datasets = [
-        RBF(num_concepts=num_concepts, n_per_concept=1000, dims=int(d / 2), add_dims_without_drift=True, random_state=i, preprocess=preprocess)
+        RBF(num_concepts=num_concepts, n_per_concept=1000, dims=d, add_dims_without_drift=True,
+            random_state=i, preprocess=preprocess)
         for i, d in enumerate(n_dims)
     ]
     datasets += [

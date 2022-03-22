@@ -3,11 +3,11 @@ import os
 import numpy as np
 import pandas as pd
 from changeds.metrics import true_positives, false_positives, false_negatives, recall, precision, fb_score, \
-    mean_until_detection, jaccard
+    mean_until_detection, jaccard, mean_cp_detection_time_error
 from scipy.stats import spearmanr
 from tqdm import tqdm
 
-from E_synthetic_data import ename
+from E_sensitivity_study import ename
 from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed
 
 
@@ -112,6 +112,12 @@ def compute_severity_metric(df: pd.DataFrame):
     return corr
 
 
+def mean_time_per_example(df):
+    runtime = df["time"].iloc[-1] - df["time"].iloc[0]
+    observations = df.index[-1] - df.index[0]
+    return runtime / observations
+
+
 if __name__ == '__main__':
     print_summary = True
     last_exp_dir = get_last_experiment_dir(ename)
@@ -127,43 +133,48 @@ if __name__ == '__main__':
             j += 1
             # if j > 10:
             #     break
-            df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes()
+            df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",", index_col=0).convert_dtypes()
             df = fill_df(df)
             approach = np.unique(df["approach"])[0]
             params = np.unique(df["parameters"])[0]
             dataset = np.unique(df["dataset"])[0]
             dims = np.unique(df["ndims"])[0]
             for rep, rep_data in df.groupby("rep"):
-                true_cps = [i for i in range(len(rep_data)) if rep_data["is-change"].iloc[i]]
-                cp_distance = true_cps[0]
+                true_cps = [i for i in rep_data.index if rep_data["is-change"].loc[i]]  # TODO: check if this is correct
+                cp_distance = true_cps[1] - true_cps[0]
+                reported_cps = [i for i in rep_data.index if rep_data["change-point"].loc[i]]
+                tp = true_positives(true_cps, reported_cps, cp_distance)
+                fp = false_positives(true_cps, reported_cps, cp_distance)
+                fn = false_negatives(true_cps, reported_cps, cp_distance)
                 n_seen_changes = len(true_cps)
-                reported_cps = [i for i in range(len(rep_data)) if rep_data["change-point"].iloc[i]]
                 jac, region_prec, region_rec = compute_region_metrics(rep_data)
                 f1_region = 2 * (region_prec * region_prec) / (region_rec + region_prec)
-                severity = compute_severity_metric(df)
+                severity = compute_severity_metric(rep_data)
+                delays = rep_data["delay"].loc[reported_cps].tolist()
+                prec = precision(tp, fp, fn)
+                rec = recall(tp, fp, fn)
+                f1 = fb_score(true_cps, reported_cps, T=2000)
+                mttd = mean_until_detection(true_cps, reported_cps)
+                mae_delay = mean_cp_detection_time_error(true_cps, reported_cps, delays)
+                mtpe = mean_time_per_example(rep_data)
+                mtpe = mtpe / 10e6
                 result_df.append([
-                    dataset, dims, approach, params, f1_region, region_prec, region_rec, jac, severity
+                    dataset, dims, approach, params,
+                    f1, mttd, mae_delay,
+                    f1_region,
+                    severity,
+                    mtpe
                 ])
-        result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "F1 (Region)", "Prec. (Region)",
-                                                     "Rec. (Region)", "Jaccard", "Sp. Corr."])
+        result_df = pd.DataFrame(result_df, columns=[
+            "Dataset", r"$d$", "Approach", "Parameters",
+            "F1", "MTTD", r"MAE $\tau$",
+            "F1 (Region)",
+            "Sp. Corr.",
+            "MTPO [ms]"])
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
-    result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
-    if print_summary:
-        summary = filter_best(result_df, median=True, worst=False)
-    result_df = result_df.round(decimals={
-        "F1 (Region)": 2, "Prec. (Region)": 2, "Rec. (Region)": 2, "Jaccard": 2, "Sp. Corr.": 2
-    })
-    result_df[result_df["Dataset"] == "Average"] = 0
-    sort_by = ["Dataset", "Dims", "Approach", "Parameters"]
+    sort_by = ["Dataset", r"$d$", "Approach", "Parameters"]
     result_df = result_df.sort_values(by=sort_by)
-    result_df.drop(["Parameters", "Dims"], axis=1, inplace=True)
-    print(result_df.groupby(["Dataset"]).mean().round(
-        decimals={"F1 (Region)": 2, "Prec. (Region)": 2, "Rec. (Region)": 2, "Jaccard": 2, "Sp. Corr.": 2}
-    ).to_latex())
-    if print_summary:
-        summary = summary.round(decimals={
-            "F1 (Region)": 2, "Prec. (Region)": 2, "Rec. (Region)": 2, "Jaccard": 2, "Sp. Corr.": 2
-        })
-        summary = summary.sort_values(by=sort_by)
-        summary.drop(["Parameters", "Dims"], axis=1, inplace=True)
-        print(summary.set_index(["Dataset", "Approach"]).to_latex(escape=False))
+    result_df.drop(["Parameters"], axis=1, inplace=True)
+    print(result_df.groupby(["Approach", "Dataset", r"$d$"]).mean().round(
+        decimals=2
+    ).to_latex(escape=False))

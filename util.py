@@ -113,3 +113,15 @@ def get_abcd_hyperparameters_from_str(string: str):
             params.append(np.nan)
     return params
 
+
+def get_E_and_eta(params):
+    E_id = "E = "
+    eta_id = "eta = "
+    try:
+        E_index = params.index(E_id) + len(E_id)
+        eta_index = params.index(eta_id) + len(eta_id)
+        E_end_index = E_index + params[E_index:].index(",")
+        eta_end_index = eta_index + params[eta_index:].index(",")
+        return int(params[E_index:E_end_index]), float(params[eta_index:eta_end_index])
+    except:
+        raise ValueError

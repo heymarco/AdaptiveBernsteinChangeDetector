@@ -7,7 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from changeds.metrics import true_positives, false_positives, false_negatives, precision, recall, fb_score
 
-from util import get_last_experiment_dir, move_legend_below_graph
+from util import get_last_experiment_dir, move_legend_below_graph, get_E_and_eta
 from E_sensitivity_study import ename
 
 
@@ -16,20 +16,6 @@ mpl.rcParams['text.usetex'] = True
 mpl.rcParams['text.latex.preamble'] = r'\usepackage{times}'
 mpl.rcParams['text.latex.preamble'] = r'\usepackage{nicefrac}'
 mpl.rc('font', family='serif')
-
-
-def get_E_and_eta(params):
-    E_id = "E = "
-    eta_id = "eta = "
-    try:
-        E_index = params.index(E_id) + len(E_id)
-        eta_index = params.index(eta_id) + len(eta_id)
-        E_end_index = E_index + params[E_index:].index(",")
-        eta_end_index = eta_index + params[eta_index:].index(",")
-        return int(params[E_index:E_end_index]), float(params[eta_index:eta_end_index])
-    except:
-        raise ValueError
-
 
 if __name__ == '__main__':
     eta_str = r"$\eta$"
