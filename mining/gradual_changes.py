@@ -78,7 +78,6 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
                 cp_distance = true_cps[1] - true_cps[0]
                 n_seen_changes = len(true_cps)
                 reported_cps = [i for i in range(len(rep_data)) if rep_data["change-point"].iloc[i]]
-                delays = rep_data["delay"].iloc[reported_cps].tolist()
                 tp = true_positives(true_cps, reported_cps, cp_distance)
                 fp = false_positives(true_cps, reported_cps, cp_distance)
                 fn = false_negatives(true_cps, reported_cps, cp_distance)
@@ -86,7 +85,8 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
                 rec = recall(tp, fp, fn)
                 f1 = fb_score(true_cps, reported_cps, T=2000)
                 mttd = mean_until_detection(true_cps, reported_cps)
-                mae_delay = change_point_mae(true_cps, reported_cps, delays)
+                delays = rep_data["delay"].iloc[reported_cps].tolist()
+                mae_delay = mean_cp_detection_time_error(true_cps, reported_cps, delays)
                 jac = compute_jaccard(rep_data)
                 mtpe = mean_time_per_example(rep_data)
                 mtpe = mtpe / 10e6
