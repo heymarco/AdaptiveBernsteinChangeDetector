@@ -8,7 +8,7 @@ from scipy.stats import spearmanr
 from tqdm import tqdm
 
 from E_sensitivity_study import ename
-from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed
+from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, get_abcd_hyperparameters_from_str
 
 
 import matplotlib as mpl
@@ -24,43 +24,6 @@ def add_mean_column(df: pd.DataFrame):
     mean_df["Parameters"] = ""
     df = pd.concat([df, mean_df], ignore_index=True).sort_values(by=["Dataset", "Approach", "Parameters"])
     return df.set_index(["Dataset", "Approach", "Parameters"])
-
-
-def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
-    df = df.sort_values(by=["F1 (Region)", "Sp. Corr."])
-    median_indices = []
-    min_indices = []
-    max_indices = []
-    indices = []
-    for _, gdf in df.groupby(["Dataset", "Approach"]):
-        if len(gdf.dropna()) == 0:
-            indices.append(gdf.index[0])
-            continue
-        max_index = gdf["F1 (Region)"].idxmax()
-        indices.append(max_index)
-        if "ABCD2" in gdf["Approach"].to_numpy():
-            max_indices.append(max_index)
-            if median:
-                med = gdf["F1 (Region)"].median()
-                median_index = (gdf["F1 (Region)"] - med).abs().idxmin()
-                if median_index == max_index and len(gdf) > 1:
-                    median_index = (gdf["F1 (Region)"] - med).abs().drop(max_index).idxmin()
-                median_indices.append(median_index)
-            if worst:
-                min_index = gdf["F1 (Region)"].idxmin()
-                min_indices.append(min_index)
-    if median:
-        indices += median_indices
-        df["Approach"].loc[median_indices] = "ABCD2 (med)"
-    if worst:
-        indices += min_indices
-        df["Approach"].loc[min_indices] = "ABCD2 (min)"
-    indices = np.unique(indices)
-    df["Approach"].loc[max_indices] = "ABCD2 (max)"
-    df = df.loc[indices]
-    if add_mean:
-        df = add_mean_column(df)
-    return df.reset_index()
 
 
 def compute_region_metrics(df: pd.DataFrame):
@@ -137,11 +100,12 @@ if __name__ == '__main__':
             df = fill_df(df)
             approach = np.unique(df["approach"])[0]
             params = np.unique(df["parameters"])[0]
+            bonferroni = get_abcd_hyperparameters_from_str(params)[-1] == 1
             dataset = np.unique(df["dataset"])[0]
             dims = np.unique(df["ndims"])[0]
             for rep, rep_data in df.groupby("rep"):
                 true_cps = [i for i in rep_data.index if rep_data["is-change"].loc[i]]  # TODO: check if this is correct
-                cp_distance = true_cps[1] - true_cps[0]
+                cp_distance = true_cps[0] + 100
                 reported_cps = [i for i in rep_data.index if rep_data["change-point"].loc[i]]
                 tp = true_positives(true_cps, reported_cps, cp_distance)
                 fp = false_positives(true_cps, reported_cps, cp_distance)
@@ -158,23 +122,25 @@ if __name__ == '__main__':
                 mae_delay = mean_cp_detection_time_error(true_cps, reported_cps, delays)
                 mtpe = mean_time_per_example(rep_data)
                 mtpe = mtpe / 10e6
+                progress = len(true_cps) / 20.0
                 result_df.append([
-                    dataset, dims, approach, params,
+                    dataset, dims, approach, params, bonferroni,
                     f1, mttd, mae_delay,
                     f1_region,
                     severity,
-                    mtpe
+                    mtpe,
+                    progress
                 ])
         result_df = pd.DataFrame(result_df, columns=[
-            "Dataset", r"$d$", "Approach", "Parameters",
+            "Dataset", r"$d$", "Approach", "Parameters", "Bonferroni",
             "F1", "MTTD", r"MAE $\tau$",
             "F1 (Region)",
             "Sp. Corr.",
-            "MTPO [ms]"])
+            "MTPO [ms]",
+            r"Progress [\%]"])
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
-    sort_by = ["Dataset", r"$d$", "Approach", "Parameters"]
+    sort_by = ["Dataset", r"$d$", "Approach", "Parameters", "Bonferroni"]
+    result_df = result_df[result_df["Bonferroni"] == False]
     result_df = result_df.sort_values(by=sort_by)
-    result_df.drop(["Parameters"], axis=1, inplace=True)
-    print(result_df.groupby(["Approach", "Dataset", r"$d$"]).mean().round(
-        decimals=2
-    ).to_latex(escape=False))
+    result_df.drop(["Parameters", "Bonferroni"], axis=1, inplace=True)
+    print(result_df.groupby(["Dataset", r"$d$", "Approach"]).mean().round(decimals=2).to_latex(escape=False))

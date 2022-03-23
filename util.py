@@ -107,7 +107,10 @@ def get_abcd_hyperparameters_from_str(string: str):
     for s in param_strings:
         s = s.split(" = ")[-1]
         try:
-            params.append(float(s))
+            if s == "True" or s == "False":
+                params.append(s == "True")
+            else:
+                params.append(float(s))
         except:
             print("Could not parse input {} to float".format(s))
             params.append(np.nan)

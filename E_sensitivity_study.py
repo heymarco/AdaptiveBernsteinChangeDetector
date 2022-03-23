@@ -1,6 +1,6 @@
 from sklearn.model_selection import ParameterGrid
 
-from changeds import RBF, Gaussian, Hypersphere
+from changeds import RBF, Gaussian, Hypersphere, LED
 
 from detector import ABCD
 
@@ -25,13 +25,16 @@ if __name__ == '__main__':
     }
 
     n_per_concept = 2000
-    num_concepts = 21
-    n_reps = 10
+    num_concepts = 7
+    n_reps = 30
     n_dims = [5, 50, 500]
     datasets = [
-        RBF(num_concepts=num_concepts, n_per_concept=1000, dims=d, add_dims_without_drift=True,
+        RBF(num_concepts=num_concepts, n_per_concept=n_per_concept, dims=d, add_dims_without_drift=True,
             random_state=i, preprocess=preprocess)
         for i, d in enumerate(n_dims)
+    ]
+    datasets += [
+        LED(num_concepts=num_concepts, n_per_concept=n_per_concept, has_noise=True, preprocess=preprocess)
     ]
     datasets += [
         Hypersphere(num_concepts=num_concepts, n_per_concept=n_per_concept, dims_drift=d,
