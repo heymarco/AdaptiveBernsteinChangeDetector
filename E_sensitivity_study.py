@@ -1,6 +1,6 @@
 from sklearn.model_selection import ParameterGrid
 
-from changeds import RBF, Gaussian, Hypersphere
+from changeds import RBF, Gaussian, Hypersphere, LED
 
 from detector import ABCD
 
@@ -16,7 +16,7 @@ if __name__ == '__main__':
         ABCD: {"encoding_factor": [0.3, 0.5, 0.7],
                "delta": [0.05],
                "update_epochs": [20, 50, 100],
-               "bonferroni": [True, False],
+               "bonferroni": [False],
                "split_type": ["exp", "all"]},
     }
 
@@ -25,13 +25,16 @@ if __name__ == '__main__':
     }
 
     n_per_concept = 2000
-    num_concepts = 21
-    n_reps = 10
+    num_concepts = 7
+    n_reps = 30
     n_dims = [5, 50, 500]
     datasets = [
-        RBF(num_concepts=num_concepts, n_per_concept=1000, dims=d, add_dims_without_drift=True,
+        RBF(num_concepts=num_concepts, n_per_concept=n_per_concept, dims=d, add_dims_without_drift=True,
             random_state=i, preprocess=preprocess)
         for i, d in enumerate(n_dims)
+    ]
+    datasets += [
+        LED(num_concepts=num_concepts, n_per_concept=n_per_concept, has_noise=True, preprocess=preprocess)
     ]
     datasets += [
         Hypersphere(num_concepts=num_concepts, n_per_concept=n_per_concept, dims_drift=d,
@@ -51,5 +54,5 @@ if __name__ == '__main__':
 
     experiment = Experiment(name=ename, configurations=algorithms,
                             datasets=datasets, reps=n_reps,
-                            condense_results=True, algorithm_timeout=60)  # one minute
+                            condense_results=True, algorithm_timeout=4 * 60)  # one minute
     experiment.run(warm_start=100)
