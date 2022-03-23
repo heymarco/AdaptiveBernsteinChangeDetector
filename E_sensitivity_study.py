@@ -16,7 +16,7 @@ if __name__ == '__main__':
         ABCD: {"encoding_factor": [0.3, 0.5, 0.7],
                "delta": [0.05],
                "update_epochs": [20, 50, 100],
-               "bonferroni": [True, False],
+               "bonferroni": [False],
                "split_type": ["exp", "all"]},
     }
 
@@ -54,5 +54,5 @@ if __name__ == '__main__':
 
     experiment = Experiment(name=ename, configurations=algorithms,
                             datasets=datasets, reps=n_reps,
-                            condense_results=True, algorithm_timeout=60)  # one minute
+                            condense_results=True, algorithm_timeout=4 * 60)  # one minute
     experiment.run(warm_start=100)
