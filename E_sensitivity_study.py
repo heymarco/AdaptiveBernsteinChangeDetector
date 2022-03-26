@@ -3,6 +3,7 @@ from sklearn.model_selection import ParameterGrid
 from changeds import RBF, Gaussian, Hypersphere, LED
 
 from detector import ABCD
+from detectors import WATCH, IBDD, D3, AdwinK
 
 from exp_logging.experiment import Experiment
 from util import preprocess
@@ -18,6 +19,8 @@ if __name__ == '__main__':
                "update_epochs": [20, 50, 100],
                "bonferroni": [False],
                "split_type": ["exp", "all"]},
+        AdwinK: {"k": [0.1, 0.2, 0.3], "delta": [0.05]},
+        D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9], "tree_depth": [1]},  # tree_depths > 1 are too sensitive...
     }
 
     algorithms = {
@@ -54,5 +57,5 @@ if __name__ == '__main__':
 
     experiment = Experiment(name=ename, configurations=algorithms,
                             datasets=datasets, reps=n_reps,
-                            condense_results=True, algorithm_timeout=4 * 60)  # one minute
+                            condense_results=True, algorithm_timeout=10 * 60)  # one minute
     experiment.run(warm_start=100)
