@@ -2,10 +2,13 @@ import os
 
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
+
 from changeds.metrics import true_positives, false_positives, false_negatives, recall, precision, fb_score, \
     mean_until_detection, jaccard, mean_cp_detection_time_error
 from scipy.stats import spearmanr
 from tqdm import tqdm
+import seaborn as sns
 
 from E_sensitivity_study import ename
 from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, get_abcd_hyperparameters_from_str
@@ -67,7 +70,10 @@ def compute_severity_metric(df: pd.DataFrame):
                 continue
             if j < i:
                 continue
-            s = str_to_arr(s, dtype=float)[0]
+            try:
+                s = str_to_arr(s, dtype=float)[0]
+            except:
+                s = float(s)
             x.append(s)
             y.append(d)
             break
@@ -100,7 +106,15 @@ if __name__ == '__main__':
             df = fill_df(df)
             approach = np.unique(df["approach"])[0]
             params = np.unique(df["parameters"])[0]
-            bonferroni = get_abcd_hyperparameters_from_str(params)[-1] == 1
+            if "ABCD" in approach:
+                params = get_abcd_hyperparameters_from_str(params)
+                bonferroni = params[-1] == "True"
+                E = params[1]
+                eta = params[2]
+            else:
+                bonferroni = False
+                E = np.nan
+                eta = np.nan
             dataset = np.unique(df["dataset"])[0]
             dims = np.unique(df["ndims"])[0]
             for rep, rep_data in df.groupby("rep"):
@@ -119,12 +133,12 @@ if __name__ == '__main__':
                 rec = recall(tp, fp, fn)
                 f1 = fb_score(true_cps, reported_cps, T=2000)
                 mttd = mean_until_detection(true_cps, reported_cps)
-                mae_delay = mean_cp_detection_time_error(true_cps, reported_cps, delays)
+                mae_delay = mean_cp_detection_time_error(true_cps, reported_cps, delays) if "ABCD" in approach else np.nan
                 mtpe = mean_time_per_example(rep_data)
                 mtpe = mtpe / 10e6
-                progress = len(true_cps) / 20.0
+                progress = len(true_cps) / 6.0
                 result_df.append([
-                    dataset, dims, approach, params, bonferroni,
+                    dataset, dims, approach, params, bonferroni, E, eta,
                     f1, mttd, mae_delay,
                     f1_region,
                     severity,
@@ -132,15 +146,26 @@ if __name__ == '__main__':
                     progress
                 ])
         result_df = pd.DataFrame(result_df, columns=[
-            "Dataset", r"$d$", "Approach", "Parameters", "Bonferroni",
+            "Dataset", r"$d$", "Approach", "Parameters", "Bonferroni", "E", r"$\eta$",
             "F1", "MTTD", r"MAE $\tau$",
             "F1 (Region)",
             "Sp. Corr.",
             "MTPO [ms]",
             r"Progress [\%]"])
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
-    sort_by = ["Dataset", r"$d$", "Approach", "Parameters", "Bonferroni"]
+    sort_by = ["Dataset", r"$d$", "Approach", "Parameters"]
     result_df = result_df[result_df["Bonferroni"] == False]
     result_df = result_df.sort_values(by=sort_by)
-    result_df.drop(["Parameters", "Bonferroni"], axis=1, inplace=True)
+    result_df.drop(["Parameters", "Bonferroni", r"MAE $\tau$"], axis=1, inplace=True)
     print(result_df.groupby(["Dataset", r"$d$", "Approach"]).mean().round(decimals=2).to_latex(escape=False))
+
+    # Sensitivity study
+    result_df = result_df[result_df["Dataset"] != "LED"]
+    sns.catplot(data=result_df, col="$d$", y="F1", x="E", hue="Approach", row=r"$\eta$", kind="box")
+    # sns.relplot(data=result_df, col="$d$", y="F1", x="E", hue="Approach", style=r"$\eta$", kind="line", ci=None)
+    plt.gcf().set_size_inches(5.5, 4)
+    plt.tight_layout()
+    plt.show()
+
+    print(result_df[result_df["$d$"] == 1000].groupby(["Dataset", "Approach"]).mean()["F1"])
+
