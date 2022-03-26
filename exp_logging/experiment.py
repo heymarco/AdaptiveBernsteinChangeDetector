@@ -55,7 +55,7 @@ class Experiment:
         if self.condense_results:
             empty_rep = df["rep"].isna() == False
             empty_is_change = df["is-change"].isna() == False
-            is_change_point = df["change-point"]
+            is_change_point = df["change-point"] == True
             bool_arr = np.logical_or(empty_rep, empty_is_change)
             bool_arr = np.logical_or(bool_arr, is_change_point)
             df = df.loc[bool_arr]
