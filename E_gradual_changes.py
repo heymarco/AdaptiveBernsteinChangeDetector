@@ -28,7 +28,7 @@ if __name__ == '__main__':
     }
 
     n_per_concept = 2000
-    n_concepts = 7
+    n_concepts = 10
     drift_length = 300
     dims = 100
     stretch = True
@@ -41,13 +41,13 @@ if __name__ == '__main__':
         GradualRBF(num_concepts=n_concepts, n_per_concept=n_per_concept, drift_length=drift_length,
                    stretch=stretch, preprocess=preprocess, dims=dims),
         GradualMNIST(num_concepts=n_concepts, stretch=stretch, drift_length=drift_length,
-                     preprocess=preprocess, n_per_concept=n_per_concept),
+                     preprocess=preprocess, n_per_concept=False),
         GradualFashionMNIST(num_concepts=n_concepts, stretch=stretch, drift_length=drift_length,
-                            preprocess=preprocess, n_per_concept=n_per_concept),
+                            preprocess=preprocess, n_per_concept=False),
         GradualCifar10(num_concepts=n_concepts, stretch=stretch, drift_length=drift_length,
-                       preprocess=preprocess, n_per_concept=n_per_concept),
+                       preprocess=preprocess, n_per_concept=False),
     ]
 
     experiment = Experiment(name=ename, configurations=algorithms, datasets=datasets,
-                            reps=n_reps, condense_results=True)
+                            reps=n_reps, condense_results=True, algorithm_timeout=10 * 60)
     experiment.run(warm_start=100)

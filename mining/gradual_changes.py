@@ -67,36 +67,36 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
             j += 1
             # if j > 2:
             #     break
-            df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes()
+            df = pd.read_csv(os.path.join(last_exp_dir, file), index_col=0, sep=",").convert_dtypes()
             df = fill_df(df)
             approach = np.unique(df["approach"])[0]
             params = np.unique(df["parameters"])[0]
             dataset = np.unique(df["dataset"])[0]
             dims = np.unique(df["ndims"])[0]
             for rep, rep_data in df.groupby("rep"):
-                true_cps = [i for i in range(len(rep_data)) if rep_data["is-change"].iloc[i]]
-                cp_distance = true_cps[1] - true_cps[0]
-                n_seen_changes = len(true_cps)
-                reported_cps = [i for i in range(len(rep_data)) if rep_data["change-point"].iloc[i]]
+                true_cps = [i for i in rep_data.index if rep_data["is-change"].loc[i]]  # TODO: check if this is correct
+                cp_distance = 2000
+                reported_cps = [i for i in rep_data.index if rep_data["change-point"].loc[i]]
                 tp = true_positives(true_cps, reported_cps, cp_distance)
                 fp = false_positives(true_cps, reported_cps, cp_distance)
                 fn = false_negatives(true_cps, reported_cps, cp_distance)
+                n_seen_changes = len(true_cps)
+                delays = rep_data["delay"].loc[reported_cps].tolist()
                 prec = precision(tp, fp, fn)
                 rec = recall(tp, fp, fn)
                 f1 = fb_score(true_cps, reported_cps, T=2000)
                 mttd = mean_until_detection(true_cps, reported_cps)
-                delays = rep_data["delay"].iloc[reported_cps].tolist()
-                mae_delay = mean_cp_detection_time_error(true_cps, reported_cps, delays)
-                jac = compute_jaccard(rep_data)
+                mae_delay = mean_cp_detection_time_error(true_cps, reported_cps,
+                                                         delays) if "ABCD" in approach else np.nan
                 mtpe = mean_time_per_example(rep_data)
                 mtpe = mtpe / 10e6
                 rcd = ratio_changes_detected(true_cps, reported_cps)
                 result_df.append([
                     dataset, dims, approach, params, f1, prec, rec, rcd,
-                    jac, mttd, mtpe, n_seen_changes, mae_delay
+                    mttd, mtpe, n_seen_changes, mae_delay
                 ])
         result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "F1", "Prec.",
-                                                     "Rec.", "RCD", "Jaccard", "MTTD", "MTPO [ms]", "PC", "CP-MAE"])
+                                                     "Rec.", "RCD", "MTTD", "MTPO [ms]", "PC", "CP-MAE"])
         df_cpy = result_df.copy()
     result_df = result_df[["Dataset", "Dims", "Approach", "Parameters", "F1", "Prec.", "Rec.", "RCD", "MTTD", "MTPO [ms]"]]
     result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
