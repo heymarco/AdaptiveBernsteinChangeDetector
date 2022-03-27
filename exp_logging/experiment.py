@@ -1,4 +1,5 @@
 import time
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -16,7 +17,7 @@ class Experiment:
     def __init__(self,
                  name: str,
                  configurations: dict,
-                 datasets: list,
+                 datasets: dict,
                  algorithm_timeout: float = 10 * 60,  # 30 minutes
                  reps: int = 1,
                  condense_results: bool = False):
@@ -34,22 +35,29 @@ class Experiment:
 
     def run(self, warm_start: int = 100):
         i = 1
-        for dataset in self.datasets:
+        for dataset_class in self.datasets.keys():
             for algorithm in self.configurations.keys():
                 for config in self.configurations[algorithm]:
                     alg = algorithm(**config)
-                    print("{}/{}: Run {} with {} on {}".format(i, self.total_runs, alg.name(), alg.parameter_str(), dataset.id()))
-                    self.repeat(alg, dataset, warm_start=warm_start)
+                    print("{}/{}: Run {} with {} on {}".format(i, self.total_runs, alg.name(),
+                                                               alg.parameter_str(), str(dataset_class)))
+                    self.repeat(alg, (dataset_class, self.datasets[dataset_class]), warm_start=warm_start)
                     i += 1
 
-    def repeat(self, detector: DriftDetector, stream: ChangeStream, warm_start: int = 100, parallel: bool = True):
+    def repeat(self, detector: DriftDetector, data: Tuple, warm_start: int = 100, parallel: bool = True):
+        data_class, data_config = data
         if parallel:
             njobs = min(self.reps, psutil.cpu_count() - 1)
-            args_list = [[detector, stream, rep, warm_start] for rep in range(self.reps)]
+            args_list = []
+            for rep in range(self.reps):
+                data_config["seed"] = rep
+                stream = data_class(**data_config)
+                args_list.append([detector, stream, rep, warm_start])
             dfs = run_async(self.evaluate_algorithm, args_list=args_list, njobs=njobs)
         else:
             dfs = []
             for rep in range(self.reps):
+                stream = data[0](data[1])
                 dfs.append(self.evaluate_algorithm(detector, stream, rep=rep, warm_start=warm_start))
         df = pd.concat(dfs, axis=0, ignore_index=True)
         if self.condense_results:
