@@ -76,6 +76,8 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
             for rep, rep_data in df.groupby("rep"):
                 true_cps = [i for i in rep_data.index if rep_data["is-change"].loc[i]]  # TODO: check if this is correct
                 cp_distance = 2000
+                if "MNIST" in dataset or "CIFAR" in dataset:
+                    cp_distance = 6000
                 reported_cps = [i for i in rep_data.index if rep_data["change-point"].loc[i]]
                 tp = true_positives(true_cps, reported_cps, cp_distance)
                 fp = false_positives(true_cps, reported_cps, cp_distance)
@@ -84,7 +86,7 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
                 delays = rep_data["delay"].loc[reported_cps].tolist()
                 prec = precision(tp, fp, fn)
                 rec = recall(tp, fp, fn)
-                f1 = fb_score(true_cps, reported_cps, T=2000)
+                f1 = fb_score(true_cps, reported_cps, T=cp_distance)
                 mttd = mean_until_detection(true_cps, reported_cps)
                 mae_delay = mean_cp_detection_time_error(true_cps, reported_cps,
                                                          delays) if "ABCD" in approach else np.nan
@@ -92,10 +94,10 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
                 mtpe = mtpe / 10e6
                 rcd = ratio_changes_detected(true_cps, reported_cps)
                 result_df.append([
-                    dataset, dims, approach, params, f1, prec, rec, rcd,
+                    dataset, dims, approach, params, rep, f1, prec, rec, rcd,
                     mttd, mtpe, n_seen_changes, mae_delay
                 ])
-        result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "F1", "Prec.",
+        result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "rep", "F1", "Prec.",
                                                      "Rec.", "RCD", "MTTD", "MTPO [ms]", "PC", "CP-MAE"])
         df_cpy = result_df.copy()
     result_df = result_df[["Dataset", "Dims", "Approach", "Parameters", "F1", "Prec.", "Rec.", "RCD", "MTTD", "MTPO [ms]"]]
@@ -147,6 +149,7 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
     min_indices = []
     max_indices = []
     indices = []
+    df = df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
     for _, gdf in df.groupby(["Dataset", "Approach"]):
         gdf = gdf.dropna()
         if len(gdf) == 0:
