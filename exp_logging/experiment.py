@@ -36,13 +36,14 @@ class Experiment:
     def run(self, warm_start: int = 100):
         i = 1
         for dataset_class in self.datasets.keys():
-            for algorithm in self.configurations.keys():
-                for config in self.configurations[algorithm]:
-                    alg = algorithm(**config)
-                    print("{}/{}: Run {} with {} on {}".format(i, self.total_runs, alg.name(),
-                                                               alg.parameter_str(), str(dataset_class)))
-                    self.repeat(alg, (dataset_class, self.datasets[dataset_class]), warm_start=warm_start)
-                    i += 1
+            for ds_config in self.datasets[dataset_class]:
+                for algorithm in self.configurations.keys():
+                    for config in self.configurations[algorithm]:
+                        alg = algorithm(**config)
+                        print("{}/{}: Run {} with {} on {}".format(i, self.total_runs, alg.name(),
+                                                                   alg.parameter_str(), str(dataset_class)))
+                        self.repeat(alg, (dataset_class, ds_config), warm_start=warm_start)
+                        i += 1
 
     def repeat(self, detector: DriftDetector, data: Tuple, warm_start: int = 100, parallel: bool = True):
         data_class, data_config = data
