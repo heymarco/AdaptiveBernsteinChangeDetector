@@ -29,9 +29,12 @@ class Experiment:
         self.condense_results = condense_results
         new_dir_for_experiment_with_name(name)
         all_configs = []
+        all_ds_configs = []
+        for conf in self.datasets.values():
+            all_ds_configs += conf
         for conf in self.configurations.values():
             all_configs += conf
-        self.total_runs = len(self.datasets) * len(all_configs)
+        self.total_runs = all_ds_configs * len(all_configs)
 
     def run(self, warm_start: int = 100):
         i = 1
