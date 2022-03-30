@@ -47,8 +47,9 @@ def add_params_to_df(row):
 
 
 def mean_time_per_example(df):
-    series = df["time"]
-    return series.diff().mean()
+    delta_t = df["time"].iloc[-1] - df["time"].iloc[1]
+    delta_obs = df.index[-1] - df.index[1]
+    return delta_t / delta_obs
 
 
 def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}):
@@ -77,7 +78,7 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
                 true_cps = [i for i in rep_data.index if rep_data["is-change"].loc[i]]  # TODO: check if this is correct
                 cp_distance = 2000
                 if "MNIST" in dataset or "CIFAR" in dataset:
-                    cp_distance = 6000
+                    cp_distance = 4000
                 reported_cps = [i for i in rep_data.index if rep_data["change-point"].loc[i]]
                 tp = true_positives(true_cps, reported_cps, cp_distance)
                 fp = false_positives(true_cps, reported_cps, cp_distance)
@@ -99,7 +100,7 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
                 ])
         result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "rep", "F1", "Prec.",
                                                      "Rec.", "RCD", "MTTD", "MTPO [ms]", "PC", "CP-MAE"])
-        df_cpy = result_df.copy()
+        result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
     result_df = result_df[["Dataset", "Dims", "Approach", "Parameters", "F1", "Prec.", "Rec.", "RCD", "MTTD", "MTPO [ms]"]]
     result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
     if print_summary:
@@ -120,19 +121,21 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
         print(summary.set_index(["Dataset", "Approach"]).to_latex(escape=False))
     abcd = result_df[result_df["Approach"] == "ABCD2"]
     abcd["E"] = abcd["E"].astype(int)
+    # average = abcd.groupby(["Approach", "E", r"$\eta$"]).mean().reset_index()
+    # average["Dataset"] = "Average"
+    # abcd = pd.concat([abcd, average], axis=0)
     g = sns.catplot(x="E", y="F1",
                     hue=r"$\eta$", col="Dataset",
-                    data=abcd, kind="strip", palette=sns.cubehelix_palette(n_colors=3),
-                    height=2, aspect=.5, s=4)
+                    data=abcd, kind="point", palette=sns.cubehelix_palette(n_colors=3),
+                    height=2, aspect=.43, errwidth=2, scale=0.5)
     axes = plt.gcf().axes
     for ax in axes:
         current_title = ax.get_title()
         dataset = current_title.split(" = ")[1]
         ax.set_title(dataset)
+    plt.gcf().subplots_adjust(left=0.08)
     plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study.pdf"))
     plt.show()
-    if isinstance(df_cpy, pd.DataFrame):
-        df_cpy.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
 
 
 def add_mean_column(df: pd.DataFrame):
