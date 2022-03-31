@@ -36,7 +36,7 @@ class Experiment:
             all_configs += conf
         self.total_runs = len(all_ds_configs) * len(all_configs)
 
-    def run(self, warm_start: int = 100):
+    def run(self, warm_start: int = 100, parallel: bool = True):
         i = 1
         for dataset_class in self.datasets.keys():
             for ds_config in self.datasets[dataset_class]:
@@ -45,7 +45,7 @@ class Experiment:
                         alg = algorithm(**config)
                         print("{}/{}: Run {} with {} on {}".format(i, self.total_runs, alg.name(),
                                                                    alg.parameter_str(), str(dataset_class)))
-                        self.repeat(alg, (dataset_class, ds_config), warm_start=warm_start)
+                        self.repeat(alg, (dataset_class, ds_config), warm_start=warm_start, parallel=parallel)
                         i += 1
 
     def repeat(self, detector: DriftDetector, data: Tuple, warm_start: int = 100, parallel: bool = True):
