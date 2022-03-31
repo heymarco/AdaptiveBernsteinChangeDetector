@@ -61,7 +61,7 @@ class Experiment:
         else:
             dfs = []
             for rep in range(self.reps):
-                stream = data[0](data[1])
+                stream = data_class(**data_config)
                 dfs.append(self.evaluate_algorithm(detector, stream, rep=rep, warm_start=warm_start))
         df = pd.concat(dfs, axis=0, ignore_index=True)
         if self.condense_results:
