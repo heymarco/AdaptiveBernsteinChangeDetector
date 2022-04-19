@@ -86,7 +86,10 @@ class PCAModel(DecoderEncoder):
         self.components = int(input_size * eta)
 
     def update(self, window, epochs: int):
-        self.pca = PCA(n_components=self.components)
+        # n_components must be between 0 and min(n_samples, n_features) with svd_solver='full'
+        max_components = min(window.shape)
+        components = min(self.components, max_components)
+        self.pca = PCA(n_components=components)
         self.pca.fit(window)
 
     def new_tuple(self, x) -> Tuple[Any, Any, Any]:
@@ -106,10 +109,7 @@ class KernelPCAModel(DecoderEncoder):
         self.components = int(input_size * eta)
 
     def update(self, window, epochs: int):
-        # n_components must be between 0 and min(n_samples, n_features) with svd_solver='full'
-        max_components = min(window.shape)
-        components = min(self.components, max_components)
-        self.pca = KernelPCA(n_components=components, kernel=self.kernel, fit_inverse_transform=True)
+        self.pca = KernelPCA(n_components=self.components, kernel=self.kernel, fit_inverse_transform=True)
         self.pca.fit(window)
 
     def new_tuple(self, x) -> Tuple[Any, Any, Any]:
