@@ -32,10 +32,10 @@ if __name__ == '__main__':
     stretch = True
     n_reps = 30
     datasets = {
-        GradualGasSensors: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
-                             "preprocess": preprocess}],
         GradualHAR: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
                       "preprocess": preprocess}],
+        GradualGasSensors: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
+                             "preprocess": preprocess}],
         GradualLED: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
                       "preprocess": preprocess, "n_per_concept": n_per_concept}],
         GradualRBF: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
