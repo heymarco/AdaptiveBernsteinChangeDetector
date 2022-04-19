@@ -52,14 +52,15 @@ if __name__ == '__main__':
     result_df = result_df[result_df["MTPO [ms]"] < 100]
     result_df[r"$d$"] = result_df["ndims"].astype(int)
     result_df["Approach"] = result_df["approach"]
+    result_df["Approach"][result_df["Approach"] == "ABCD"] = "ABCD0"
+    result_df["Approach"][result_df["Approach"] == "ABCD2"] = "ABCD"
     result_df = result_df.groupby(["Approach", "parameters", "rep", r"$d$", r"$\eta$"]).rolling(100).mean()
     sns.relplot(data=result_df, x=r"$|\mathcal{W}|$", y="MTPO [ms]", ci=None,
-                style="Approach", hue=r"$\eta$", col=r"$d$", kind="line", lw=1)
+                style="Approach", hue=r"$\eta$", col=r"$d$", kind="line", lw=1,
+                height=1.55, aspect=1.2)
     plt.yscale("log")
     plt.xscale("log")
-    plt.gcf().set_size_inches(5.5, 1.8)
-    plt.tight_layout()
-    plt.subplots_adjust(right=0.8)
+    plt.subplots_adjust(top=0.85, bottom=0.3, left=0.1, right=0.83)
     plt.savefig(os.path.join("..", "figures", "runtime.pdf"))
     plt.show()
 

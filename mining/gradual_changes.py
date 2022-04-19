@@ -172,12 +172,12 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
                 min_indices.append(min_index)
     if median:
         indices += median_indices
-        df["Approach"].loc[median_indices] = "ABCD2 (med)"
+        df["Approach"].loc[median_indices] = "ABCD (med)"
     if worst:
         indices += min_indices
-        df["Approach"].loc[min_indices] = "ABCD2 (min)"
+        df["Approach"].loc[min_indices] = "ABCD (min)"
     indices = np.unique(indices)
-    df["Approach"].loc[max_indices] = "ABCD2 (max)"
+    df["Approach"].loc[max_indices] = "ABCD (max)"
     df = df.loc[indices]
     if add_mean:
         df = add_mean_column(df)

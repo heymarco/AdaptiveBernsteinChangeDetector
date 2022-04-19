@@ -58,7 +58,8 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
         indices += min_indices
         df["Approach"].loc[min_indices] = "ABCD2 (min)"
     indices = np.unique(indices)
-    df["Approach"].loc[max_indices] = "ABCD2 (max)"
+    if median or worst:
+        df["Approach"].loc[max_indices] = "ABCD2 (max)"
     df = df.loc[indices]
     if add_mean:
         df = add_mean_column(df)
@@ -157,19 +158,29 @@ if __name__ == '__main__':
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
     result_df = result_df.groupby(["Dataset", "Approach", "Parameters", "Dims"]).mean().reset_index()
     result_df = filter_best(result_df, median=False, worst=False)
-    result_df = result_df[result_df["Approach"] != "ABCD2"]  # we only report the result w.r.t. max F1 as we do for our competitors.
+    # result_df = result_df[result_df["Approach"] != "ABCD2"]  # we only report the result w.r.t. max F1 as we do for our competitors.
     sort_by = ["Dataset", "Dims", "Approach"]
     result_df = result_df.sort_values(by=sort_by)
     print(result_df.groupby(["Dataset", "Approach", "Dims"]).mean().round(
         decimals={"F1 (Region)": 2, "Prec. (Region)": 2, "Rec. (Region)": 2, "Jaccard": 2, "Sp. Corr.": 2}
     ).to_latex())
     result_df.fillna(0.0, inplace=True)
-    sns.relplot(data=result_df.reset_index(), x="Sp. Corr.", y="F1 (Region)", hue="Dims", style="Approach", col="Dataset", kind="scatter")
-    # plt.gcf().set_size_inches(6, 2.5)
-    plt.xlim(-1, 1)
-    plt.ylim(0, 1)
+    result_df = result_df.sort_values(by=["Dims", "Dataset"])
+    result_df = result_df.astype(dtype={"Dims": str})
+    result_df["Sp. Corr."][result_df["Approach"] == "D3"] = result_df[result_df["Approach"] == "D3"]["Sp. Corr."] * -1
+    result_df = result_df[result_df["Dataset"] != "Average"]
+    result_df["Approach"][result_df["Approach"] == "ABCD2"] = "ABCD"
+    sns.relplot(data=result_df.reset_index(), x="Sp. Corr.", y="Jaccard", hue="Dims",
+                style="Approach", col="Dataset", kind="scatter",
+                height=1.75, aspect=0.7, palette=sns.cubehelix_palette(n_colors=4))
+    # plt.xlim(-1, 1)
+    # plt.ylim(0, 1)
     for ax in plt.gcf().axes:
-        ax.axhline(0, c="black", lw=0.5)
-        ax.axvline(0, c="black", lw=0.5)
-    plt.tight_layout()
+        ax.axhline(0.5, c="black", lw=0.3, linestyle="dashed")
+        ax.axvline(0, c="black", lw=0.3, linestyle="dashed")
+    # plt.tight_layout()
+    for ax in plt.gcf().axes:
+        ax.set_title(ax.get_title().split(" = ")[1])
+    plt.subplots_adjust(left=0.08)
+    plt.savefig(os.path.join("..", "figures", "evaluation_drift_region.pdf"))
     plt.show()

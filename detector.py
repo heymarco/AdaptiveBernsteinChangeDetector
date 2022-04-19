@@ -4,7 +4,7 @@ from changeds import QuantifiesSeverity
 from detectors import RegionalDriftDetector
 from scipy.stats import zscore
 
-from components.feature_extraction import AutoEncoder
+from components.feature_extraction import AutoEncoder, DecoderEncoder, PCAModel, KernelPCAModel
 from components.windowing import AdaptiveWindow, p_bernstein
 from exp_logging.logger import ExperimentLogger
 
@@ -12,11 +12,12 @@ from exp_logging.logger import ExperimentLogger
 class ABCD(RegionalDriftDetector, QuantifiesSeverity):
     def __init__(self,
                  delta: float,
+                 model_id: str = "pca",
                  bound: str = "bernstein",
                  update_epochs: int = 20,
                  split_type: str = "exp",
                  new_ae: bool = True,
-                 bonferroni: bool = True,
+                 bonferroni: bool = False,
                  encoding_factor: float = 0.7):
         """
         :param delta: The desired confidence level
@@ -28,7 +29,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.new_ae = new_ae
         self.bonferroni = bonferroni
         self.window = AdaptiveWindow(delta=delta, bound=bound, split_type=split_type, bonferroni=bonferroni)
-        self.ae: AutoEncoder = None
+        self.model: DecoderEncoder = None
         self.last_change_point = None
         self.last_detection_point = None
         self.seen_elements = 0
@@ -40,10 +41,20 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.eta = encoding_factor
         self._severity = np.nan
         self.logger = None
+        self.model_id = model_id
+        if model_id == "pca":
+            self.model_class = PCAModel
+        elif model_id == "kpca":
+            self.model_class = KernelPCAModel
+        elif model_id == "ae":
+            self.model_class = AutoEncoder
+        else:
+            raise ValueError
         super(ABCD, self).__init__()
 
     def name(self) -> str:
-        return "ABCD2" if self.split_type == "exp" else "ABCD"
+        this_name = "ABCD" if self.split_type == "exp" else "ABCD0"
+        return this_name + " ({})".format(self.model_id)
 
     def parameter_str(self) -> str:
         return r"$\delta = {}, E = {}, \eta = {}, bc = {}$".format(self.delta, self.epochs, self.eta, self.bonferroni)
@@ -53,9 +64,9 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.window.set_logger(l)
 
     def pre_train(self, data):
-        if self.ae is None:
-            self.ae = AutoEncoder(input_size=data.shape[-1], eta=self.eta)
-        self.ae.update(data, epochs=self.epochs)
+        if self.model is None:
+            self.model = self.model_class(input_size=data.shape[-1], eta=self.eta)
+        self.model.update(data, epochs=self.epochs)
 
     def add_element(self, input_value):
         """
@@ -64,11 +75,11 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         :return:
         """
         self.seen_elements += 1
-        if self.ae is None:
-            self.ae = AutoEncoder(input_size=input_value.shape[-1], eta=self.eta)
-        new_tuple = self.ae.new_tuple(input_value)
+        if self.model is None:
+            self.model = AutoEncoder(input_size=input_value.shape[-1], eta=self.eta)
+        new_tuple = self.model.new_tuple(input_value)
         self.window.grow(new_tuple)  # add new tuple to window
-        self._last_loss = self.window.last_loss()
+        self._last_loss = self.window.most_recent_loss()
         self.in_concept_change, detection_point = self.window.has_change()
         self.logger.track_change_point(self.in_concept_change)
         if self.in_concept_change:
@@ -77,12 +88,12 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
 
             # LOGGING
             self.last_detection_point = detection_point
-            self.delay = len(self.window) - self.window._last_split_index
+            self.delay = len(self.window) - self.window.t_star
             self.last_change_point = self.last_detection_point - self.delay
             self.logger.track_delay(self.delay)
 
             if self.new_ae:
-                self.ae = AutoEncoder(input_size=input_value.shape[-1], eta=self.eta)
+                self.model = AutoEncoder(input_size=input_value.shape[-1], eta=self.eta)
             self.pre_train(self.window.data_new())  # update autoencoder after change
             self.window.reset()  # forget outdated data
 
@@ -92,15 +103,17 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
     def _find_drift_dimensions(self):
         data = self.window.data()
         output = self.window.reconstructions()
+        variance0, variance1 = self.window.variance_tracker.pairwise_aggregate(self.window.t_star).variance()
         error = output - data
         squared_errors = np.power(error, 2)
-        window1 = squared_errors[:self.window._last_split_index]
-        window2 = squared_errors[self.window._last_split_index:]
+        window1 = squared_errors[:self.window.t_star]
+        window2 = squared_errors[self.window.t_star:]
         sigma1 = np.std(window1, axis=0)
         sigma2 = np.std(window2, axis=0)
         mean1 = np.mean(window1, axis=0)
         mean2 = np.mean(window2, axis=0)
-        eps = mean2 - mean1
+        print((variance0, sigma1 ** 2), (variance1, sigma2 ** 2))
+        eps = np.abs(mean2 - mean1)
         n1 = len(window1)
         n2 = len(window2)
         p = p_bernstein(eps, n1=n1, n2=n2, sigma1=sigma1, sigma2=sigma2)
@@ -116,7 +129,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         return self._severity
 
     def _evaluate_magnitude(self):
-        agg = self.window.variance_tracker.pairwise_aggregate(self.window._last_split_index)
+        agg = self.window.variance_tracker.pairwise_aggregate(self.window.t_star)
         mean_old, mean_new = agg.mean()
         std_old, _ = agg.std()
         z_score_normalized = np.abs(mean_new - mean_old) / std_old
