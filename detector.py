@@ -112,7 +112,6 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         sigma2 = np.std(window2, axis=0)
         mean1 = np.mean(window1, axis=0)
         mean2 = np.mean(window2, axis=0)
-        print((variance0, sigma1 ** 2), (variance1, sigma2 ** 2))
         eps = np.abs(mean2 - mean1)
         n1 = len(window1)
         n2 = len(window2)
