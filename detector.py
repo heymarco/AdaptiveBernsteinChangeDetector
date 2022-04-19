@@ -76,7 +76,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         """
         self.seen_elements += 1
         if self.model is None:
-            self.model = AutoEncoder(input_size=input_value.shape[-1], eta=self.eta)
+            self.model = self.model_class(input_size=input_value.shape[-1], eta=self.eta)
         new_tuple = self.model.new_tuple(input_value)
         self.window.grow(new_tuple)  # add new tuple to window
         self._last_loss = self.window.most_recent_loss()
@@ -93,7 +93,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
             self.logger.track_delay(self.delay)
 
             if self.new_ae:
-                self.model = AutoEncoder(input_size=input_value.shape[-1], eta=self.eta)
+                self.model = self.model_class(input_size=input_value.shape[-1], eta=self.eta)
             self.pre_train(self.window.data_new())  # update autoencoder after change
             self.window.reset()  # forget outdated data
 
