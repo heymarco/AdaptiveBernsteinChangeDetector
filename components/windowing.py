@@ -145,11 +145,11 @@ class AdaptiveWindow:
     def _update_cut_indices(self):
         if len(self.variance_tracker) <= self.min_window_size:
             return
-        start_index = int(self.min_window_size / 2)
-        end_index = len(self.variance_tracker) - start_index
+        k_min = int(self.min_window_size / 2)
+        k_max = len(self.variance_tracker) - k_min
         if self.split_type == "exp":
-            n_points = int(np.log(end_index - start_index)) + 1
-            indices = [end_index - 2 ** i + 1 for i in range(n_points)]
+            n_points = int(np.log(k_max - k_min)) + 1
+            indices = [k_max - 2 ** i + 1 for i in range(n_points)]
             indices = [indices[-i] for i in range(n_points)]
             # Always include the current best guess about the change point
             if self._argmin_p_value:
@@ -157,15 +157,17 @@ class AdaptiveWindow:
                 indices = np.append(indices, values=best_cut_index)
             self._cut_indices = np.sort(indices)
         elif self.split_type == "res":
-            n_points = min(self.reservoir_size, (end_index - start_index))
-            if n_points < self.reservoir_size:
-                self._cut_indices = range(start_index, end_index, 1)
+            n_possible_splits = k_max - k_min
+            if n_possible_splits <= self.reservoir_size:
+                self._cut_indices = list(range(k_min, k_max, 1))
             else:
-                indices = range(start_index, end_index, 1)
-                sample = np.random.choice(indices, n_points, replace=False)
-                self._cut_indices = np.sort(sample).tolist()
+                prob_of_updating = self.reservoir_size / n_possible_splits
+                if np.random.uniform() < prob_of_updating:
+                    remove_index = np.random.randint(0, high=self.reservoir_size)
+                    self._cut_indices.pop(remove_index)
+                    self._cut_indices.append(k_max - 1)
         else:
-            self._cut_indices = [i for i in range(start_index, end_index, 1)]
+            self._cut_indices = list(range(k_min, k_max, 1))
 
     def _cut_index(self, offset=0):
         index_out_of_bounds = self._argmin_p_value + offset < 0

@@ -60,7 +60,10 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         return this_name + " ({})".format(self.model_id)
 
     def parameter_str(self) -> str:
-        return r"$\delta = {}, E = {}, \eta = {}, bc = {}$".format(self.delta, self.epochs, self.eta, self.bonferroni)
+        return r"$\delta = {}, E = {}, \eta = {}, bc = {}$, st = {}, rs = {}".format(self.delta, self.epochs,
+                                                                                     self.eta, self.bonferroni,
+                                                                                     self.split_type,
+                                                                                     self.reservoir_size)
 
     def set_logger(self, l: ExperimentLogger):
         self.logger = l
