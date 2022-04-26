@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from tqdm import tqdm
@@ -12,7 +13,7 @@ from E_gradual_changes import ename
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
-mpl.rcParams['text.latex.preamble'] = r'\usepackage[T1]{fontenc}'
+mpl.rcParams['text.latex.preamble'] = r'\usepackage{libertine}'
 mpl.rcParams['text.latex.preamble'] = r'\usepackage{nicefrac}'
 mpl.rc('font', family='serif')
 
@@ -117,7 +118,7 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
             "F1": 2, "Prec.": 2, "Rec.": 2, "RCD": 2, "MTPO [ms]": 3, "MTTD": 1
         })
         summary = summary.sort_values(by=sort_by)
-        summary.drop(["Parameters", "Dims"], axis=1, inplace=True)
+        summary.drop(["Parameters", "Dims", "MTPO [ms]"], axis=1, inplace=True)
         print(summary.set_index(["Dataset", "Approach"]).to_latex(escape=False))
     abcd = result_df[result_df["Approach"] == "ABCD2"]
     abcd["E"] = abcd["E"].astype(int)
@@ -127,7 +128,7 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
     g = sns.catplot(x="E", y="F1",
                     hue=r"$\eta$", col="Dataset",
                     data=abcd, kind="point", palette=sns.cubehelix_palette(n_colors=3),
-                    height=2, aspect=.43, errwidth=2, scale=0.5)
+                    height=1.75, aspect=5 / 7 * 0.8 * 1.1, errwidth=2, scale=0.5)
     axes = plt.gcf().axes
     for ax in axes:
         current_title = ax.get_title()
@@ -154,6 +155,10 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
     indices = []
     df = df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
     for _, gdf in df.groupby(["Dataset", "Approach"]):
+        if np.all(gdf["F1"].isna()):
+            max_index = gdf.index[0]
+            indices.append(max_index)
+            continue
         gdf = gdf.dropna()
         if len(gdf) == 0:
             continue

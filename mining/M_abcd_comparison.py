@@ -16,7 +16,7 @@ from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
-mpl.rcParams['text.latex.preamble'] = r'\usepackage[T1]{fontenc}'
+mpl.rcParams['text.latex.preamble'] = r'\usepackage{libertine}'
 mpl.rcParams['text.latex.preamble'] = r'\usepackage{nicefrac}'
 mpl.rc('font', family='serif')
 
@@ -163,7 +163,7 @@ if __name__ == '__main__':
     result_df = result_df[result_df["Dataset"] != "LED"]
     sns.catplot(data=result_df, col="$d$", y="F1", x="E", hue="Approach", row=r"$\eta$", kind="box")
     # sns.relplot(data=result_df, col="$d$", y="F1", x="E", hue="Approach", style=r"$\eta$", kind="line", ci=None)
-    plt.gcf().set_size_inches(5.5, 4)
+    plt.gcf().set_size_inches(6, 4)
     plt.tight_layout()
     plt.show()
 

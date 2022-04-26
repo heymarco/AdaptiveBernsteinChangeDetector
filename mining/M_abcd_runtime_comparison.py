@@ -11,7 +11,7 @@ from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
-mpl.rcParams['text.latex.preamble'] = r'\usepackage[T1]{fontenc}'
+mpl.rcParams['text.latex.preamble'] = r'\usepackage{libertine}'
 mpl.rcParams['text.latex.preamble'] = r'\usepackage{nicefrac}'
 mpl.rc('font', family='serif')
 
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     result_df = result_df.groupby(["Approach", "parameters", "rep", r"$d$", r"$\eta$"]).rolling(100).mean()
     sns.relplot(data=result_df, x=r"$|\mathcal{W}|$", y="MTPO [ms]", ci=None,
                 style="Approach", hue=r"$\eta$", col=r"$d$", kind="line", lw=1,
-                height=1.55, aspect=1.2)
+                height=1.75, aspect=0.8 * 5 / 3)
     plt.yscale("log")
     plt.xscale("log")
     plt.subplots_adjust(top=0.85, bottom=0.3, left=0.1, right=0.83)

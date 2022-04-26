@@ -39,7 +39,7 @@ def p_bernstein(eps, n1, n2, sigma1, sigma2, abs_max: float = 1.0):
 
 class AdaptiveWindow:
     def __init__(self, delta: float, bound: str, max_size: int = np.infty,
-                 split_type: str = "all", bonferroni: bool = True):
+                 split_type: str = "all", bonferroni: bool = True, reservoir_size: int = 200):
         """
         :param delta: The error rate
         :param bound: The bound, 'hoeffding', 'chernoff', or 'bernstein'
@@ -58,6 +58,7 @@ class AdaptiveWindow:
         self.split_type = split_type
         self.min_window_size = 60
         self.logger = None
+        self.reservoir_size = reservoir_size
         self._cut_indices = []
 
     def __len__(self):
@@ -155,6 +156,14 @@ class AdaptiveWindow:
                 best_cut_index = self._cut_index(self._argmin_p_value)
                 indices = np.append(indices, values=best_cut_index)
             self._cut_indices = np.sort(indices)
+        elif self.split_type == "res":
+            n_points = min(self.reservoir_size, (end_index - start_index))
+            if n_points < self.reservoir_size:
+                return range(start_index, end_index, 1)
+            else:
+                indices = range(start_index, end_index, 1)
+                sample = np.random.choice(indices, n_points, replace=False)
+                return np.sort(sample).tolist()
         else:
             self._cut_indices = [i for i in range(start_index, end_index, 1)]
 

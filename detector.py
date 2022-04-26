@@ -18,7 +18,8 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
                  split_type: str = "exp",
                  new_ae: bool = True,
                  bonferroni: bool = False,
-                 encoding_factor: float = 0.7):
+                 encoding_factor: float = 0.7,
+                 reservoir_size: int = 10):
         """
         :param delta: The desired confidence level
         :param warm_start: The length of the warm start phase in which we train the AE without detecting changes
@@ -28,7 +29,9 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.delta = delta
         self.new_ae = new_ae
         self.bonferroni = bonferroni
-        self.window = AdaptiveWindow(delta=delta, bound=bound, split_type=split_type, bonferroni=bonferroni)
+        self.reservoir_size = reservoir_size
+        self.window = AdaptiveWindow(delta=delta, bound=bound, split_type=split_type,
+                                     bonferroni=bonferroni, reservoir_size=reservoir_size)
         self.model: DecoderEncoder = None
         self.last_change_point = None
         self.last_detection_point = None

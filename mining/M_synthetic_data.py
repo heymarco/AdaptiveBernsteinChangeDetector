@@ -15,7 +15,7 @@ from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
-mpl.rcParams['text.latex.preamble'] = r'\usepackage[T1]{fontenc}'
+mpl.rcParams['text.latex.preamble'] = r'\usepackage{libertine}'
 mpl.rcParams['text.latex.preamble'] = r'\usepackage{nicefrac}'
 mpl.rc('font', family='serif')
 
@@ -172,7 +172,7 @@ if __name__ == '__main__':
     result_df["Approach"][result_df["Approach"] == "ABCD2"] = "ABCD"
     sns.relplot(data=result_df.reset_index(), x="Sp. Corr.", y="Jaccard", hue="Dims",
                 style="Approach", col="Dataset", kind="scatter",
-                height=1.75, aspect=0.7, palette=sns.cubehelix_palette(n_colors=4))
+                height=1.75, aspect=0.8, palette=sns.cubehelix_palette(n_colors=4))
     # plt.xlim(-1, 1)
     # plt.ylim(0, 1)
     for ax in plt.gcf().axes:

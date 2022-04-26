@@ -56,7 +56,7 @@ if __name__ == '__main__':
         this_data = result_df[result_df["Dataset"] == all_datasets[ax_index]]
         ax.set_title(all_datasets[ax_index])
         sns.lineplot(data=this_data, x=eta_str, y="F1", hue="E", ax=axes[ax_index])
-    plt.gcf().set_size_inches((4, 3))
+    plt.gcf().set_size_inches((5, 3))
     move_legend_below_graph(axes, ncol=5, title=r"$E$")
     plt.tight_layout()
     plt.show()
