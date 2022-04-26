@@ -159,11 +159,11 @@ class AdaptiveWindow:
         elif self.split_type == "res":
             n_points = min(self.reservoir_size, (end_index - start_index))
             if n_points < self.reservoir_size:
-                return range(start_index, end_index, 1)
+                self._cut_indices = range(start_index, end_index, 1)
             else:
                 indices = range(start_index, end_index, 1)
                 sample = np.random.choice(indices, n_points, replace=False)
-                return np.sort(sample).tolist()
+                self._cut_indices = np.sort(sample).tolist()
         else:
             self._cut_indices = [i for i in range(start_index, end_index, 1)]
 
