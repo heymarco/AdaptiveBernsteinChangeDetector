@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     n_per_concept = 2000
     num_concepts = 10
-    n_reps = 1
+    n_reps = 30
     n_dims = [20, 100, 500]
     datasets = {
         Gaussian: [{
@@ -53,4 +53,4 @@ if __name__ == '__main__':
     experiment = Experiment(name=ename, configurations=algorithms,
                             datasets=datasets, reps=n_reps,
                             condense_results=True, algorithm_timeout=10 * 60)
-    experiment.run(warm_start=100, parallel=False)
+    experiment.run(warm_start=100, parallel=True)
