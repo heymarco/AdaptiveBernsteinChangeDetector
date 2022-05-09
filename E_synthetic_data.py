@@ -9,13 +9,12 @@ from exp_logging.experiment import Experiment
 from util import preprocess
 
 
-ename = "sensitivity_study"
+ename = "synthetic_data"
 
 
 if __name__ == '__main__':
     parameter_choices = {
-        ABCD: {"encoding_factor": [# 0.3,
-                                   0.5, 0.7],
+        ABCD: {"encoding_factor": [0.3, 0.5, 0.7],
                "delta": [0.05],
                "update_epochs": [20, 50, 100],
                "bonferroni": [False],
@@ -33,6 +32,10 @@ if __name__ == '__main__':
     n_reps = 1
     n_dims = [20, 100, 500]
     datasets = {
+        Gaussian: [{
+            "num_concepts": num_concepts, "n_per_concept": n_per_concept,
+            "dims_drift": d, "dims_no_drift": d, "preprocess": preprocess, "variance_drift": vd
+        } for d in n_dims for vd in [True, False]],
         RBF: [{
             "num_concepts": num_concepts, "n_per_concept": n_per_concept,
             "dims": d, "add_dims_without_drift": True, "preprocess": preprocess
@@ -45,14 +48,9 @@ if __name__ == '__main__':
             "num_concepts": num_concepts, "n_per_concept": n_per_concept,
             "dims_drift": d, "dims_no_drift": d, "preprocess": preprocess
         } for d in n_dims],
-        Gaussian: [{
-            "num_concepts": num_concepts, "n_per_concept": n_per_concept,
-            "dims_drift": d, "dims_no_drift": d, "preprocess": preprocess, "variance_drift": vd
-        } for d in n_dims for vd in [True, False]],
-
     }
 
     experiment = Experiment(name=ename, configurations=algorithms,
                             datasets=datasets, reps=n_reps,
                             condense_results=True, algorithm_timeout=10 * 60)
-    experiment.run(warm_start=100)
+    experiment.run(warm_start=100, parallel=False)

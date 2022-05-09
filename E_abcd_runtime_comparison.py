@@ -1,3 +1,11 @@
+import os
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
+
+import torch
+torch.set_num_threads(1)
+
 from sklearn.model_selection import ParameterGrid
 
 from changeds import Gaussian
@@ -14,6 +22,7 @@ ename = "abcd_runtime_comparison"
 if __name__ == '__main__':
     parameter_choices = {
         ABCD: {"encoding_factor": [0.3, 0.5, 0.7],
+               "model_id": ["ae"],
                "delta": [1E-10],
                "update_epochs": [50],
                "split_type": ["exp", "all"]},
@@ -25,15 +34,15 @@ if __name__ == '__main__':
 
     n_per_concept = 5000
     num_concepts = 1
-    n_reps = 10
+    n_reps = 1
     n_dims = [10, 100, 1000]
-    datasets = [
-        Gaussian(num_concepts=num_concepts, n_per_concept=n_per_concept,
-                 dims_drift=d, dims_no_drift=d, variance_drift=True, preprocess=preprocess)
-        for d in n_dims
-    ]
+    datasets = {
+        Gaussian:  [{"num_concepts": num_concepts, "n_per_concept": n_per_concept,
+                     "dims_drift": d, "dims_no_drift": d, "variance_drift": True, "preprocess": preprocess}
+                    for d in n_dims]
+    }
 
     experiment = Experiment(name=ename, configurations=algorithms,
                             datasets=datasets, reps=n_reps,
                             condense_results=False, algorithm_timeout=5 * 60)  # one minute
-    experiment.run(warm_start=100)
+    experiment.run(warm_start=100, parallel=False)

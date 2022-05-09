@@ -12,7 +12,7 @@ from exp_logging.logger import ExperimentLogger
 class ABCD(RegionalDriftDetector, QuantifiesSeverity):
     def __init__(self,
                  delta: float,
-                 model_id: str = "pca",
+                 model_id: str = "ae",
                  bound: str = "bernstein",
                  update_epochs: int = 20,
                  split_type: str = "exp",
@@ -134,9 +134,22 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         return self._severity
 
     def _evaluate_magnitude(self):
-        agg = self.window.variance_tracker.pairwise_aggregate(self.window.t_star)
-        mean_old, mean_new = agg.mean()
-        std_old, _ = agg.std()
-        z_score_normalized = np.abs(mean_new - mean_old) / std_old
+        drift_point = self.window.t_star
+        data = self.window.data()
+        recons = self.window.reconstructions()
+        drift_dims = self.get_drift_dims()
+        if len(drift_dims) == 0:
+            drift_dims = np.arange(data.shape[-1])
+        input_pre = data[:drift_point, drift_dims]
+        input_post = data[drift_point:, drift_dims]
+        output_pre = recons[:drift_point, drift_dims]
+        output_post = recons[drift_point:, drift_dims]
+        se_pre = (input_pre - output_pre) ** 2
+        se_post = (input_post - output_post) ** 2
+        mse_pre = np.mean(se_pre, axis=-1)
+        mse_post = np.mean(se_post, axis=-1)
+        mean_pre, std_pre = np.mean(mse_pre), np.std(mse_pre)
+        mean_post = np.mean(mse_post)
+        z_score_normalized = np.abs(mean_post - mean_pre) / std_pre
         self._severity = float(z_score_normalized)
 
