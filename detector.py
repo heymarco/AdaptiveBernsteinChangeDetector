@@ -16,6 +16,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
                  bound: str = "bernstein",
                  update_epochs: int = 20,
                  split_type: str = "exp",
+                 force_significant_drift_subspace: bool = False,
                  new_ae: bool = True,
                  bonferroni: bool = False,
                  encoding_factor: float = 0.7,
@@ -30,6 +31,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.new_ae = new_ae
         self.bonferroni = bonferroni
         self.reservoir_size = reservoir_size
+        self.force_significant_drift_subspace: bool = force_significant_drift_subspace
         self.window = AdaptiveWindow(delta=delta, bound=bound, split_type=split_type,
                                      bonferroni=bonferroni, reservoir_size=reservoir_size)
         self.model: DecoderEncoder = None
@@ -107,24 +109,26 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         return self._last_loss
 
     def _find_drift_dimensions(self):
-        m1, m2 = self.window.variance_tracker.pairwise_aggregate(self.window.t_star).mean()
-        global_eps = np.abs(m1-m2)
         data = self.window.data()
         output = self.window.reconstructions()
         error = output - data
         squared_errors = np.power(error, 2)
         window1 = squared_errors[:self.window.t_star]
         window2 = squared_errors[self.window.t_star:]
-        sigma1 = np.std(window1, axis=0)
-        sigma2 = np.std(window2, axis=0)
         mean1 = np.mean(window1, axis=0)
         mean2 = np.mean(window2, axis=0)
         eps = np.abs(mean2 - mean1)
-        n1 = len(window1)
-        n2 = len(window2)
-        p = p_bernstein(eps, n1=n1, n2=n2, sigma1=sigma1, sigma2=sigma2)
-        self.drift_dimensions = p < self.delta
-        self.drift_dimensions = np.abs(mean1 - mean2) >= global_eps
+        if self.force_significant_drift_subspace:
+            sigma1 = np.std(window1, axis=0)
+            sigma2 = np.std(window2, axis=0)
+            n1 = len(window1)
+            n2 = len(window2)
+            p = p_bernstein(eps, n1=n1, n2=n2, sigma1=sigma1, sigma2=sigma2)
+            self.drift_dimensions = p < self.delta
+        else:
+            m1, m2 = self.window.variance_tracker.pairwise_aggregate(self.window.t_star).mean()
+            global_eps = np.abs(m1 - m2)
+            self.drift_dimensions = eps >= global_eps
         return p
 
     def get_drift_dims(self) -> np.ndarray:
