@@ -32,18 +32,18 @@ if __name__ == '__main__':
     n_reps = 30
     n_dims = [20, 100, 500]
     datasets = {
-        Gaussian: [{
-            "num_concepts": num_concepts, "n_per_concept": n_per_concept,
-            "dims_drift": d, "dims_no_drift": d, "preprocess": preprocess, "variance_drift": vd
-        } for d in n_dims for vd in [True, False]],
-        RBF: [{
-            "num_concepts": num_concepts, "n_per_concept": n_per_concept,
-            "dims": d, "add_dims_without_drift": True, "preprocess": preprocess
-        } for d in n_dims],
+        # Gaussian: [{
+        #     "num_concepts": num_concepts, "n_per_concept": n_per_concept,
+        #     "dims_drift": d, "dims_no_drift": d, "preprocess": preprocess, "variance_drift": vd
+        # } for d in n_dims for vd in [True, False]],
+        # RBF: [{
+        #     "num_concepts": num_concepts, "n_per_concept": n_per_concept,
+        #     "dims": d, "add_dims_without_drift": True, "preprocess": preprocess
+        # } for d in n_dims],
         LED: [{
             "num_concepts": num_concepts, "n_per_concept": n_per_concept,
-            "dims": d, "add_dims_without_drift": True, "preprocess": preprocess
-        } for d in n_dims],
+            "add_dims_without_drift": True, "preprocess": preprocess
+        }],
         Hypersphere: [{
             "num_concepts": num_concepts, "n_per_concept": n_per_concept,
             "dims_drift": d, "dims_no_drift": d, "preprocess": preprocess
