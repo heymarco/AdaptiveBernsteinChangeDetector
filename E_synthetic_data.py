@@ -41,8 +41,7 @@ if __name__ == '__main__':
         #     "dims": d, "add_dims_without_drift": True, "preprocess": preprocess
         # } for d in n_dims],
         LED: [{
-            "num_concepts": num_concepts, "n_per_concept": n_per_concept,
-            "add_dims_without_drift": True, "preprocess": preprocess
+            "num_concepts": num_concepts, "n_per_concept": n_per_concept, "preprocess": preprocess
         }],
         Hypersphere: [{
             "num_concepts": num_concepts, "n_per_concept": n_per_concept,
