@@ -15,7 +15,7 @@ ename = "synthetic_data"
 if __name__ == '__main__':
     parameter_choices = {
         ABCD: {"encoding_factor": [0.3, 0.5, 0.7],
-               "delta": [0.05],
+               "delta": [0.2, 0.05, 0.01],
                "update_epochs": [20, 50, 100],
                "bonferroni": [False],
                "split_type": ["exp"]},
@@ -29,17 +29,17 @@ if __name__ == '__main__':
 
     n_per_concept = 2000
     num_concepts = 10
-    n_reps = 30
-    n_dims = [20, 100, 500]
+    n_reps = 1
+    n_dims = [24, 100, 500]
     datasets = {
-        # Gaussian: [{
-        #     "num_concepts": num_concepts, "n_per_concept": n_per_concept,
-        #     "dims_drift": d, "dims_no_drift": d, "preprocess": preprocess, "variance_drift": vd
-        # } for d in n_dims for vd in [True, False]],
-        # RBF: [{
-        #     "num_concepts": num_concepts, "n_per_concept": n_per_concept,
-        #     "dims": d, "add_dims_without_drift": True, "preprocess": preprocess
-        # } for d in n_dims],
+        Gaussian: [{
+            "num_concepts": num_concepts, "n_per_concept": n_per_concept,
+            "dims": d, "preprocess": preprocess, "variance_drift": vd
+        } for d in n_dims for vd in [False, True]],
+        RBF: [{
+            "num_concepts": num_concepts, "n_per_concept": n_per_concept,
+            "dims": d, "add_dims_without_drift": True, "preprocess": preprocess
+        } for d in n_dims],
         LED: [{
             "num_concepts": num_concepts, "n_per_concept": n_per_concept, "preprocess": preprocess
         }],

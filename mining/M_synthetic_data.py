@@ -2,16 +2,15 @@ import os
 
 import numpy as np
 import pandas as pd
-from changeds.metrics import true_positives, false_positives, false_negatives, recall, precision, fb_score, \
-    mean_until_detection, jaccard
+from changeds.metrics import fb_score, jaccard
 from scipy.stats import spearmanr
 from tqdm import tqdm
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 from E_synthetic_data import ename
-from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed
-
+from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, \
+    get_abcd_hyperparameters_from_str
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
@@ -40,7 +39,7 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
             continue
         max_index = gdf["F1"].idxmax()
         indices.append(max_index)
-        if "ABCD2" in gdf["Approach"].to_numpy():
+        if "ABCD (ae)" in gdf["Approach"].to_numpy():
             max_indices.append(max_index)
             if median:
                 med = gdf["F1"].median()
@@ -141,6 +140,12 @@ if __name__ == '__main__':
             params = np.unique(df["parameters"])[0]
             dataset = np.unique(df["dataset"])[0]
             dims = np.unique(df["ndims"])[0]
+            if "ABCD" in approach:
+                parsed_params = get_abcd_hyperparameters_from_str(params)
+                E, eta = parsed_params[1], parsed_params[2]
+            else:
+                E = np.nan
+                eta = np.nan
             for rep, rep_data in df.groupby("rep"):
                 true_cps = [i for i in rep_data.index if rep_data["is-change"].loc[i]]
                 cp_distance = true_cps[0]
@@ -151,9 +156,9 @@ if __name__ == '__main__':
                 f1_region = 2 * (region_prec * region_prec) / (region_rec + region_prec)
                 severity = compute_severity_metric(df)
                 result_df.append([
-                    dataset, dims, approach, params, f1, f1_region, region_prec, region_rec, jac, severity
+                    rep, dataset, dims, approach, params, E, eta, f1, f1_region, region_prec, region_rec, jac, severity
                 ])
-        result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "F1", "F1 (Region)", "Prec. (Region)",
+        result_df = pd.DataFrame(result_df, columns=["Rep", "Dataset", "Dims", "Approach", "Parameters", "E", "eta", "F1", "F1 (Region)", "Prec. (Region)",
                                                      "Rec. (Region)", "Jaccard", "Sp. Corr."])
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
     result_df = result_df.groupby(["Dataset", "Approach", "Parameters", "Dims"]).mean().reset_index()
@@ -161,7 +166,7 @@ if __name__ == '__main__':
     # result_df = result_df[result_df["Approach"] != "ABCD2"]  # we only report the result w.r.t. max F1 as we do for our competitors.
     sort_by = ["Dataset", "Dims", "Approach"]
     result_df = result_df.sort_values(by=sort_by)
-    print(result_df.groupby(["Dataset", "Approach", "Dims"]).mean().round(
+    print(result_df.groupby(["Dataset", "Approach", "Dims", "Rep"]).mean().round(
         decimals={"F1 (Region)": 2, "Prec. (Region)": 2, "Rec. (Region)": 2, "Jaccard": 2, "Sp. Corr.": 2}
     ).to_latex())
     result_df.fillna(0.0, inplace=True)
@@ -170,9 +175,10 @@ if __name__ == '__main__':
     result_df["Sp. Corr."][result_df["Approach"] == "D3"] = result_df[result_df["Approach"] == "D3"]["Sp. Corr."] * -1
     result_df = result_df[result_df["Dataset"] != "Average"]
     result_df["Approach"][result_df["Approach"] == "ABCD2"] = "ABCD"
+    n_colors = len(np.unique(result_df["Dims"]))
     sns.relplot(data=result_df.reset_index(), x="Sp. Corr.", y="Jaccard", hue="Dims",
                 style="Approach", col="Dataset", kind="scatter",
-                height=1.75, aspect=0.8, palette=sns.cubehelix_palette(n_colors=4))
+                height=1.75, aspect=0.8, palette=sns.cubehelix_palette(n_colors=n_colors))
     # plt.xlim(-1, 1)
     # plt.ylim(0, 1)
     for ax in plt.gcf().axes:
