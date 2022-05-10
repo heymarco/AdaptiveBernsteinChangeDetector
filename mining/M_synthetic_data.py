@@ -7,6 +7,7 @@ from scipy.stats import spearmanr
 from tqdm import tqdm
 import seaborn as sns
 import matplotlib.pyplot as plt
+from sklearn.metrics import precision_score, recall_score
 
 from E_synthetic_data import ename
 from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, \
@@ -80,8 +81,11 @@ def compute_region_metrics(df: pd.DataFrame):
             a = str_to_arr(a, int)
             b = str_to_arr(b, int)
             jac = jaccard(a, b) if len(b) > 0 else np.nan
-            prec = len(np.intersect1d(a, b)) / len(a)
-            rec = len(np.intersect1d(a, b)) / len(b)
+            tp = len(np.intersect1d(a, b))
+            fp = len(np.setdiff1d(b, np.intersect1d(a, b)))
+            fn = len(np.setdiff1d(a, np.intersect1d(a, b)))
+            prec = tp / (tp + fp)
+            rec = tp / (tp + fn)
             jaccard_scores.append(jac)
             prec_scores.append(prec)
             recall_scores.append(rec)
@@ -153,7 +157,7 @@ if __name__ == '__main__':
                 reported_cps = [i for i in rep_data.index if rep_data["change-point"].loc[i]]
                 f1 = fb_score(true_cps=true_cps, reported_cps=reported_cps, T=2000)
                 jac, region_prec, region_rec = compute_region_metrics(rep_data)
-                f1_region = 2 * (region_prec * region_prec) / (region_rec + region_prec)
+                f1_region = 2 * (region_rec * region_prec) / (region_rec + region_prec)
                 severity = compute_severity_metric(df)
                 result_df.append([
                     rep, dataset, dims, approach, params, E, eta, f1, f1_region, region_prec, region_rec, jac, severity
@@ -176,13 +180,13 @@ if __name__ == '__main__':
     result_df = result_df[result_df["Dataset"] != "Average"]
     result_df["Approach"][result_df["Approach"] == "ABCD2"] = "ABCD"
     n_colors = len(np.unique(result_df["Dims"]))
-    sns.relplot(data=result_df.reset_index(), x="Sp. Corr.", y="Jaccard", hue="Dims",
+    sns.relplot(data=result_df.reset_index(), x="Sp. Corr.", y="F1 (Region)", hue="Dims",
                 style="Approach", col="Dataset", kind="scatter",
                 height=1.75, aspect=0.8, palette=sns.cubehelix_palette(n_colors=n_colors))
-    # plt.xlim(-1, 1)
-    # plt.ylim(0, 1)
+    plt.xlim(-1, 1)
+    plt.ylim(-1, 1)
     for ax in plt.gcf().axes:
-        ax.axhline(0.5, c="black", lw=0.3, linestyle="dashed")
+        ax.axhline(0, c="black", lw=0.3, linestyle="dashed")
         ax.axvline(0, c="black", lw=0.3, linestyle="dashed")
     # plt.tight_layout()
     for ax in plt.gcf().axes:
