@@ -39,7 +39,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.bound = bound
         self.last_training_point = None
         self._last_loss = np.nan
-        self.drift_dimensions_p = None
+        self.drift_dimensions = None
         self.epochs = update_epochs
         self.eta = encoding_factor
         self._severity = np.nan
@@ -107,6 +107,8 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         return self._last_loss
 
     def _find_drift_dimensions(self):
+        m1, m2 = self.window.variance_tracker.pairwise_aggregate(self.window.t_star).mean()
+        global_eps = np.abs(m1-m2)
         data = self.window.data()
         output = self.window.reconstructions()
         error = output - data
@@ -121,12 +123,13 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         n1 = len(window1)
         n2 = len(window2)
         p = p_bernstein(eps, n1=n1, n2=n2, sigma1=sigma1, sigma2=sigma2)
-        self.drift_dimensions_p = p
+        self.drift_dimensions = p < self.delta
+        self.drift_dimensions = np.abs(mean1 - mean2) >= global_eps
         return p
 
     def get_drift_dims(self) -> np.ndarray:
         return np.array([
-            i for i in range(len(self.drift_dimensions_p)) if self.drift_dimensions_p[i] < self.delta
+            i for i in range(len(self.drift_dimensions)) if self.drift_dimensions[i]
         ])
 
     def get_severity(self):
