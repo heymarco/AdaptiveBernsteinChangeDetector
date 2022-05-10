@@ -43,10 +43,10 @@ if __name__ == '__main__':
         LED: [{
             "num_concepts": num_concepts, "n_per_concept": n_per_concept, "preprocess": preprocess
         }],
-        Hypersphere: [{
-            "num_concepts": num_concepts, "n_per_concept": n_per_concept,
-            "dims_drift": d, "dims_no_drift": d, "preprocess": preprocess
-        } for d in n_dims],
+        # Hypersphere: [{
+        #     "num_concepts": num_concepts, "n_per_concept": n_per_concept,
+        #     "dims_drift": d, "dims_no_drift": d, "preprocess": preprocess
+        # } for d in n_dims],
     }
 
     experiment = Experiment(name=ename, configurations=algorithms,
