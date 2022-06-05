@@ -32,10 +32,10 @@ if __name__ == '__main__':
     n_reps = 30
     n_dims = [24, 100, 500]
     datasets = {
-        # Gaussian: [{
-        #     "num_concepts": num_concepts, "n_per_concept": n_per_concept,
-        #     "dims": d, "preprocess": preprocess, "variance_drift": vd
-        # } for d in n_dims for vd in [False, True]],
+        Gaussian: [{
+            "num_concepts": num_concepts, "n_per_concept": n_per_concept,
+            "dims": d, "preprocess": preprocess, "variance_drift": vd
+        } for d in n_dims for vd in [False, True]],
         LED: [{
             "num_concepts": num_concepts, "n_per_concept": n_per_concept, "preprocess": preprocess
         }],

@@ -124,16 +124,21 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
             n1 = len(window1)
             n2 = len(window2)
             p = p_bernstein(eps, n1=n1, n2=n2, sigma1=sigma1, sigma2=sigma2)
-            self.drift_dimensions = p < self.delta
+            self.drift_dimensions = p
+        else:
+            self.drift_dimensions = eps
+
+    def get_drift_dims(self) -> np.ndarray:
+        if self.force_significant_drift_subspace:
+            return np.array([
+                i for i in range(len(self.drift_dimensions)) if self.drift_dimensions[i] < self.delta
+            ])
         else:
             m1, m2 = self.window.variance_tracker.pairwise_aggregate(self.window.t_star).mean()
             global_eps = np.abs(m1 - m2)
-            self.drift_dimensions = eps >= global_eps
-
-    def get_drift_dims(self) -> np.ndarray:
-        return np.array([
-            i for i in range(len(self.drift_dimensions)) if self.drift_dimensions[i]
-        ])
+            return np.array([
+                i for i in range(len(self.drift_dimensions)) if self.drift_dimensions[i] > global_eps
+            ])
 
     def get_severity(self):
         return self._severity

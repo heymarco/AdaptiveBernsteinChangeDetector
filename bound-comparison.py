@@ -18,7 +18,6 @@ def bernstein_drift_score(tau, n1, n2, a, b):
         return - (n * t ** 2) / (2 * (var + (b - a) * t / 3))
     return 2 * np.exp(exponent(n1, kappa)) + 2 * np.exp(exponent(n2, (1 - kappa)))
 
-
 if __name__ == '__main__':
     steps = 1000
     a = -1
