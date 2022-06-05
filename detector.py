@@ -16,7 +16,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
                  bound: str = "bernstein",
                  update_epochs: int = 20,
                  split_type: str = "exp",
-                 force_significant_drift_subspace: bool = False,
+                 force_significant_drift_subspace: bool = True,
                  new_ae: bool = True,
                  bonferroni: bool = False,
                  encoding_factor: float = 0.7,
