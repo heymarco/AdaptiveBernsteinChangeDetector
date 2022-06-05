@@ -62,10 +62,12 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         return this_name + " ({})".format(self.model_id)
 
     def parameter_str(self) -> str:
-        return r"$\delta = {}, E = {}, \eta = {}, bc = {}$, st = {}, rs = {}".format(self.delta, self.epochs,
-                                                                                     self.eta, self.bonferroni,
-                                                                                     self.split_type,
-                                                                                     self.reservoir_size)
+        return r"$\delta = {}, E = {}, \eta = {}, bc = {}$, st = {}, rs = {}, fsds = {}".format(self.delta, self.epochs,
+                                                                                                self.eta,
+                                                                                                self.bonferroni,
+                                                                                                self.split_type,
+                                                                                                self.reservoir_size,
+                                                                                                self.force_significant_drift_subspace)
 
     def set_logger(self, l: ExperimentLogger):
         self.logger = l
@@ -163,4 +165,3 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         mean_post = np.mean(mse_post)
         z_score_normalized = np.abs(mean_post - mean_pre) / std_pre
         self._severity = float(z_score_normalized)
-
