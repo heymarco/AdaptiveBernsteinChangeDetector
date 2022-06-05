@@ -130,9 +130,10 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
 
     def get_drift_dims(self) -> np.ndarray:
         if self.force_significant_drift_subspace:
-            return np.array([
+            drift_dims = np.array([
                 i for i in range(len(self.drift_dimensions)) if self.drift_dimensions[i] < self.delta
             ])
+            return np.arange(len(self.drift_dimensions)) if len(drift_dims) == 0 else drift_dims
         else:
             m1, m2 = self.window.variance_tracker.pairwise_aggregate(self.window.t_star).mean()
             global_eps = np.abs(m1 - m2)
