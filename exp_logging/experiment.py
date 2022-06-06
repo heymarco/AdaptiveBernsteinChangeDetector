@@ -119,12 +119,14 @@ class Experiment:
                 if isinstance(detector, QuantifiesSeverity):
                     logger.track_drift_severity(detector.get_severity())
                 if isinstance(detector, RegionalDriftDetector):
+                    if isinstance(detector, ABCD):
+                        logger.track_dims_p(detector.get_dims_p_values())
                     logger.track_dims_found(detector.get_drift_dims())
                 if isinstance(stream, RegionalChangeStream) and change_count > 0:
                     logger.track_dims_gt(stream.approximate_change_regions()[change_count - 1])
             logger.finalize_round()
-            rount_time = time.perf_counter()
-            if rount_time - start_time > self.algorithm_timeout:
+            round_time = time.perf_counter()
+            if round_time - start_time > self.algorithm_timeout:
                 print("{} with {} on {} timed out!".format(detector.name(), detector.parameter_str(), stream.id()))
                 break
         return logger.get_dataframe()

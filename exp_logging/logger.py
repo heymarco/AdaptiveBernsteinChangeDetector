@@ -9,7 +9,8 @@ import numpy as np
 class ExperimentLogger:
 
     def __init__(self,
-                 columns: list = ["rep", "approach", "parameters", "dataset", "time", "metric", "p", "change-point", "is-change", "delay", "ndims", "dims-gt", "dims-found",
+                 columns: list = ["rep", "approach", "parameters", "dataset", "time", "metric", "p", "change-point",
+                                  "is-change", "delay", "ndims", "dims-gt", "dims-found", "dims-p",
                                   "drift-type", "drift-length", "severity-gt", "severity"]):
         self._data = []
         self._columns = columns
@@ -70,6 +71,9 @@ class ExperimentLogger:
 
     def track_dims_found(self, dims):
         self._track_value(dims, "dims-found")
+
+    def track_dims_p(self, p):
+        self._track_value(p, "dims-p")
 
     def track_stream_type(self, t):
         self._track_value(t, "drift-type")

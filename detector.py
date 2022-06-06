@@ -130,6 +130,9 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         else:
             self.drift_dimensions = eps
 
+    def get_dims_p_values(self) -> np.ndarray:
+        return self.drift_dimensions
+
     def get_drift_dims(self) -> np.ndarray:
         if self.force_significant_drift_subspace:
             drift_dims = np.array([

@@ -71,13 +71,13 @@ def compute_severity_metric(df: pd.DataFrame):
     na_indices = [i for i in range(len(x)) if pd.isna(x[i])]
     x = np.delete(x, na_indices)
     y = np.delete(y, na_indices)
+    if len(x) < 2 or len(y) < 2:
+        return np.nan
     try:
         corr, p = pearsonr(x, y)
     except:
         x = np.array([float(x_i[1:-1]) for x_i in x.flatten()])
         y = y.flatten().astype(float)
-        if len(x) < 2 or len(y) < 2:
-            return np.nan
         corr, p = pearsonr(x, y)
     return corr
 
