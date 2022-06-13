@@ -2,18 +2,14 @@ import os
 
 import numpy as np
 import pandas as pd
-from matplotlib.lines import Line2D
 
-from changeds.metrics import fb_score, jaccard
-from scipy.stats import spearmanr, pearsonr
 from tqdm import tqdm
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.metrics import precision_score, recall_score
 
 from E_synthetic_data import ename
 from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, \
-    get_abcd_hyperparameters_from_str
+    get_abcd_hyperparameters_from_str, cm2inch
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
@@ -60,7 +56,7 @@ if __name__ == '__main__':
                                                           "approach", "has changed", "p-value"])
         result_df.to_csv(os.path.join(cache_dir, "cached-p-values.csv"), index=False)
 
-    steps = 100
+    steps = 10
     max_thresh = 2
     evaluated_thresholds = max_thresh - max_thresh * np.arange(steps + 1) / steps
     result = []
@@ -78,6 +74,7 @@ if __name__ == '__main__':
             f1 = 2 * prec * rec / (prec + rec)
             result.append(list(keys) + [prec, rec, f1, thresh])
     result = pd.DataFrame(result, columns=groupby + ["precision", "recall", "f1", "threshold"])
-    sns.lineplot(data=result, x="threshold", y="f1", hue="dataset")
+    sns.lineplot(data=result, x="threshold", y="f1", hue="dataset", palette=sns.cubehelix_palette(n_colors=4))
+    plt.gcf().set_size_inches((3.33, 2))
     plt.show()
 

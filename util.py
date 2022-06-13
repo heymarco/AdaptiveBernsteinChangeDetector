@@ -130,3 +130,11 @@ def get_E_and_eta(params):
         return int(params[E_index:E_end_index]), float(params[eta_index:eta_end_index])
     except:
         raise ValueError
+
+
+def cm2inch(*tupl):
+    inch = 2.54
+    if isinstance(tupl[0], tuple):
+        return tuple(i/inch for i in tupl[0])
+    else:
+        return tuple(i/inch for i in tupl)

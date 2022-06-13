@@ -89,25 +89,38 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
                 prec = precision(tp, fp, fn)
                 rec = recall(tp, fp, fn)
                 f1 = fb_score(true_cps, reported_cps, T=cp_distance)
+                f05 = fb_score(true_cps, reported_cps, T=cp_distance, beta=0.5)
+                f2 = fb_score(true_cps, reported_cps, T=cp_distance, beta=2)
                 mttd = mean_until_detection(true_cps, reported_cps)
                 mae_delay = mean_cp_detection_time_error(true_cps, reported_cps,
                                                          delays) if "ABCD" in approach else np.nan
                 mtpe = mean_time_per_example(rep_data)
                 mtpe = mtpe / 10e6
-                rcd = ratio_changes_detected(true_cps, reported_cps)
                 result_df.append([
-                    dataset, dims, approach, params, rep, f1, prec, rec, rcd,
+                    dataset, dims, approach, params, rep, f1, f05, f2, prec, rec,
                     mttd, mtpe, n_seen_changes, mae_delay
                 ])
-        result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "rep", "F1", "Prec.",
-                                                     "Rec.", "RCD", "MTTD", "MTPO [ms]", "PC", "CP-MAE"])
+        result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "rep", "F1", "F0.5",
+                                                     "F2", "Prec.", "Rec.", "MTD",
+                                                     "MTPO [ms]", "PC", "CP-MAE"])
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
-    result_df = result_df[["Dataset", "Dims", "Approach", "Parameters", "F1", "Prec.", "Rec.", "RCD", "MTTD", "MTPO [ms]"]]
+    result_df = result_df[["Dataset", "Dims", "Approach", "Parameters", "F0.5", "F1", "F2", "Prec.", "Rec.",
+                           "MTD", "MTPO [ms]"]]
     result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
     if print_summary:
-        summary = filter_best(result_df, **summary_kwargs)
+        result_df["MTD"] = 1 / result_df["MTD"]
+        summary_best = result_df.groupby(["Dataset", "Approach"]).max().reset_index()
+        summary_best["Approach"][summary_best["Approach"] == "ABCD2"] = "ABCD (AE, best)"
+        summary_median = result_df[result_df["Approach"] == "ABCD2"]
+        summary_median = summary_median.groupby(["Dataset", "Approach"]).median().reset_index()
+        summary_median["Approach"][summary_median["Approach"] == "ABCD2"] = "ABCD (AE, med)"
+        summary = pd.concat([summary_best, summary_median])
+        summary["MTD"] = 1 / summary["MTD"]
+        mean = summary.groupby(["Approach"]).mean().reset_index()
+        mean["Dataset"] = "AVG"
+        summary = pd.concat([summary, mean])
     result_df = result_df.round(decimals={
-        "F1": 2, "Prec.": 2, "Rec.": 2, "RCD": 2, "MTPO [ms]": 3, "MTTD": 1
+        "F1": 2, "F0.5": 2, "F2": 2, "Prec.": 2, "Rec.": 2, "MTPO [ms]": 3, "MTTD": 1
     })
     result_df[result_df["Dataset"] == "Average"] = 0
     sort_by = ["Dims", "Dataset", "Approach", "Parameters"]
@@ -115,10 +128,10 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
     result_df = result_df.apply(func=add_params_to_df, axis=1)
     if print_summary:
         summary = summary.round(decimals={
-            "F1": 2, "Prec.": 2, "Rec.": 2, "RCD": 2, "MTPO [ms]": 3, "MTTD": 1
+            "F1": 2, "F0.5": 2, "F2": 2, "Prec.": 2, "Rec.": 2, "MTPO [ms]": 3, "MTD": 1
         })
         summary = summary.sort_values(by=sort_by)
-        summary.drop(["Parameters", "Dims", "MTPO [ms]"], axis=1, inplace=True)
+        summary.drop(["Parameters", "Dims", "MTPO [ms]", "Prec.", "Rec."], axis=1, inplace=True)
         print(summary.set_index(["Dataset", "Approach"]).to_latex(escape=False))
     abcd = result_df[result_df["Approach"] == "ABCD2"]
     abcd["E"] = abcd["E"].astype(int)

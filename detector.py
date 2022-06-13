@@ -16,8 +16,8 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
                  bound: str = "bernstein",
                  update_epochs: int = 20,
                  split_type: str = "exp",
-                 force_significant_drift_subspace: bool = True,
                  new_ae: bool = True,
+                 subspace_threshold: float = 1.0,
                  bonferroni: bool = False,
                  encoding_factor: float = 0.7,
                  reservoir_size: int = 10):
@@ -30,8 +30,8 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.delta = delta
         self.new_ae = new_ae
         self.bonferroni = bonferroni
+        self.subspace_threshold = subspace_threshold
         self.reservoir_size = reservoir_size
-        self.force_significant_drift_subspace: bool = force_significant_drift_subspace
         self.window = AdaptiveWindow(delta=delta, bound=bound, split_type=split_type,
                                      bonferroni=bonferroni, reservoir_size=reservoir_size)
         self.model: DecoderEncoder = None
@@ -120,31 +120,21 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         mean1 = np.mean(window1, axis=0)
         mean2 = np.mean(window2, axis=0)
         eps = np.abs(mean2 - mean1)
-        if self.force_significant_drift_subspace:
-            sigma1 = np.std(window1, axis=0)
-            sigma2 = np.std(window2, axis=0)
-            n1 = len(window1)
-            n2 = len(window2)
-            p = p_bernstein(eps, n1=n1, n2=n2, sigma1=sigma1, sigma2=sigma2)
-            self.drift_dimensions = p
-        else:
-            self.drift_dimensions = eps
+        sigma1 = np.std(window1, axis=0)
+        sigma2 = np.std(window2, axis=0)
+        n1 = len(window1)
+        n2 = len(window2)
+        p = p_bernstein(eps, n1=n1, n2=n2, sigma1=sigma1, sigma2=sigma2)
+        self.drift_dimensions = p
 
     def get_dims_p_values(self) -> np.ndarray:
         return self.drift_dimensions
 
     def get_drift_dims(self) -> np.ndarray:
-        if self.force_significant_drift_subspace:
-            drift_dims = np.array([
-                i for i in range(len(self.drift_dimensions)) if self.drift_dimensions[i] < self.delta
-            ])
-            return np.arange(len(self.drift_dimensions)) if len(drift_dims) == 0 else drift_dims
-        else:
-            m1, m2 = self.window.variance_tracker.pairwise_aggregate(self.window.t_star).mean()
-            global_eps = np.abs(m1 - m2)
-            return np.array([
-                i for i in range(len(self.drift_dimensions)) if self.drift_dimensions[i] > global_eps
-            ])
+        drift_dims = np.array([
+            i for i in range(len(self.drift_dimensions)) if self.drift_dimensions[i] < self.subspace_threshold
+        ])
+        return np.arange(len(self.drift_dimensions)) if len(drift_dims) == 0 else drift_dims
 
     def get_severity(self):
         return self._severity
