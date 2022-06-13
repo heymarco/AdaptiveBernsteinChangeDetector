@@ -19,8 +19,8 @@ if __name__ == '__main__':
                "update_epochs": [20, 50, 100],
                "bonferroni": [False],
                "split_type": ["exp"]},
-        # AdwinK: {"k": [0.1, 0.2, 0.3], "delta": [0.05]},
-        # D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9], "tree_depth": [1]},  # tree_depths > 1 are too sensitive...
+        AdwinK: {"k": [0.1, 0.2, 0.3], "delta": [0.05]},
+        D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9], "tree_depth": [1]},  # tree_depths > 1 are too sensitive...
     }
 
     algorithms = {
@@ -32,21 +32,17 @@ if __name__ == '__main__':
     n_reps = 30
     n_dims = [24, 100, 500]
     datasets = {
-        Gaussian: [{
-            "num_concepts": num_concepts, "n_per_concept": n_per_concept,
-            "dims": d, "preprocess": preprocess, "variance_drift": vd
-        } for d in n_dims for vd in [False, True]],
-        LED: [{
-            "num_concepts": num_concepts, "n_per_concept": n_per_concept, "preprocess": preprocess
-        }],
-        RBF: [{
-            "num_concepts": num_concepts, "n_per_concept": n_per_concept,
-            "dims": d, "random_subspace_size": True, "preprocess": preprocess
-        } for d in n_dims],
-        # Hypersphere: [{
+        # Gaussian: [{
         #     "num_concepts": num_concepts, "n_per_concept": n_per_concept,
-        #     "dims_drift": d, "dims_no_drift": d, "preprocess": preprocess
-        # } for d in n_dims],
+        #     "dims": d, "preprocess": preprocess, "variance_drift": vd
+        # } for d in n_dims for vd in [False, True]],
+        # LED: [{
+        #     "num_concepts": num_concepts, "n_per_concept": n_per_concept, "preprocess": preprocess
+        # }],
+        Hypersphere: [{
+            "num_concepts": num_concepts, "n_per_concept": n_per_concept,
+            "dims": d, "preprocess": preprocess
+        } for d in n_dims],
     }
 
     experiment = Experiment(name=ename, configurations=algorithms,
