@@ -74,7 +74,8 @@ if __name__ == '__main__':
             f1 = 2 * prec * rec / (prec + rec)
             result.append(list(keys) + [prec, rec, f1, thresh])
     result = pd.DataFrame(result, columns=groupby + ["precision", "recall", "f1", "threshold"])
-    sns.lineplot(data=result, x="threshold", y="f1", hue="dataset", palette=sns.cubehelix_palette(n_colors=4))
+    sns.lineplot(data=result, x="threshold", y="f1", hue="dataset",
+                 palette=sns.cubehelix_palette(n_colors=len(np.unique(result["dataset"]))))
     plt.gcf().set_size_inches((3.33, 2))
     plt.show()
 
