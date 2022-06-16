@@ -20,6 +20,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
                  subspace_threshold: float = 1.0,
                  bonferroni: bool = False,
                  encoding_factor: float = 0.7,
+                 num_splits: int = 50,
                  reservoir_size: int = 10):
         """
         :param delta: The desired confidence level
@@ -30,10 +31,11 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.delta = delta
         self.new_ae = new_ae
         self.bonferroni = bonferroni
+        self.num_splits = num_splits
         self.subspace_threshold = subspace_threshold
         self.reservoir_size = reservoir_size
         self.window = AdaptiveWindow(delta=delta, bound=bound, split_type=split_type,
-                                     bonferroni=bonferroni, reservoir_size=reservoir_size)
+                                     bonferroni=bonferroni, reservoir_size=reservoir_size, n_splits=num_splits)
         self.model: DecoderEncoder = None
         self.last_change_point = None
         self.last_detection_point = None
@@ -62,12 +64,13 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         return this_name + " ({})".format(self.model_id)
 
     def parameter_str(self) -> str:
-        return r"$\delta = {}, E = {}, \eta = {}, bc = {}$, st = {}, rs = {}, st = {}".format(self.delta, self.epochs,
+        return r"$\delta = {}, E = {}, \eta = {}, bc = {}$, st = {}, rs = {}, st = {}, n-splits = {}".format(self.delta, self.epochs,
                                                                                                 self.eta,
                                                                                                 self.bonferroni,
                                                                                                 self.split_type,
                                                                                                 self.reservoir_size,
-                                                                                                self.subspace_threshold)
+                                                                                                self.subspace_threshold,
+                                                                                                             self.num_splits)
 
     def set_logger(self, l: ExperimentLogger):
         self.logger = l

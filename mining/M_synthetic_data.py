@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from changeds.metrics import fb_score, jaccard
+from changeds.metrics import fb_score, jaccard, true_positives, false_positives, precision, recall, false_negatives
 from scipy.stats import spearmanr, pearsonr
 from tqdm import tqdm
 import seaborn as sns
@@ -11,7 +11,7 @@ from sklearn.metrics import precision_score, recall_score
 
 from E_synthetic_data import ename
 from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, \
-    get_abcd_hyperparameters_from_str
+    get_abcd_hyperparameters_from_str, cm2inch
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
@@ -60,10 +60,9 @@ def compute_region_metrics(df: pd.DataFrame):
 
 
 def compute_severity_metric(df: pd.DataFrame):
-    changes = df["change-point"]
-    idxs = [i for i, change in enumerate(changes) if change]
-    severities = df["severity-gt"].iloc[idxs]
-    detected_severities = df["severity"].iloc[idxs]
+    df = df[df["change-point"].astype(bool)]
+    severities = df["severity-gt"]
+    detected_severities = df["severity"]
     x = severities.to_numpy()
     y = detected_severities.to_numpy()
     if np.all(pd.isna(x)):
@@ -71,6 +70,7 @@ def compute_severity_metric(df: pd.DataFrame):
     na_indices = [i for i in range(len(x)) if pd.isna(x[i])]
     x = np.delete(x, na_indices)
     y = np.delete(y, na_indices)
+    rep = np.unique(df["rep"])
     if len(x) < 2 or len(y) < 2:
         return np.nan
     try:
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     last_exp_dir = get_last_experiment_dir(ename)
     all_files = os.listdir(last_exp_dir)
     cache_dir = create_cache_dir_if_needed(last_exp_dir)
-    if os.path.exists(os.path.join(cache_dir, "cached.csv")):
+    if os.path.exists(os .path.join(cache_dir, "cached.csv")):
         print("Use cache")
         result_df = pd.read_csv(os.path.join(cache_dir, "cached.csv"))
     else:
@@ -103,28 +103,49 @@ if __name__ == '__main__':
             params = np.unique(df["parameters"])[0]
             dataset = np.unique(df["dataset"])[0]
             dims = np.unique(df["ndims"])[0]
+            severity = compute_severity_metric(df)
             if "ABCD" in approach:
                 parsed_params = get_abcd_hyperparameters_from_str(params)
                 E, eta = parsed_params[1], parsed_params[2]
             else:
                 E = np.nan
                 eta = np.nan
+            result_df.append([np.nan, dataset, dims, approach, params, E, eta,
+                              np.nan, np.nan, np.nan, np.nan, severity, np.nan])
             for rep, rep_data in df.groupby("rep"):
+                true_cps = [i for i in rep_data.index if rep_data["is-change"].loc[i]]  # TODO: check if this is correct
+                cp_distance = 2000
+                if "MNIST" in dataset or "CIFAR" in dataset:
+                    cp_distance = 4000
+                reported_cps = [i for i in rep_data.index if rep_data["change-point"].loc[i]]
+                tp = true_positives(true_cps, reported_cps, cp_distance)
+                fp = false_positives(true_cps, reported_cps, cp_distance)
+                fn = false_negatives(true_cps, reported_cps, cp_distance)
+                n_seen_changes = len(true_cps)
+                delays = rep_data["delay"].loc[reported_cps].tolist()
+                prec = precision(tp, fp, fn)
+                rec = recall(tp, fp, fn)
+                f1 = fb_score(true_cps, reported_cps, T=cp_distance)
                 jac, region_prec, region_rec = compute_region_metrics(rep_data)
                 f1_region = 2 * (region_rec * region_prec) / (region_rec + region_prec)
-                severity = compute_severity_metric(df)
                 result_df.append([
-                    rep, dataset, dims, approach, params, E, eta, f1_region, region_prec, region_rec, jac, severity
+                    rep, dataset, dims, approach, params, E, eta, f1_region, region_prec, region_rec, jac, np.nan, f1
                 ])
         result_df = pd.DataFrame(result_df, columns=["Rep", "Dataset", "Dims", "Approach", "Parameters", "E", "eta", "F1 (Subspace)", "Prec. (Region)",
-                                                     "Rec. (Region)", "Jaccard", "Pearson R"])
+                                                     "Rec. (Region)", "Jaccard", "Pearson R", "F1"])
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
-    result_df = result_df.groupby(["Dataset", "Approach", "Dims"]).mean().reset_index()
+    result_df = result_df.groupby(["Dataset", "Approach", "Parameters", "Dims"]).mean().reset_index()
+    # max_dfs = []
+    # for _, gdf in result_df.groupby(["Dataset", "Approach", "Dims"]):
+    #     max_f1 = gdf["F1"].median()
+    #     gdf = gdf[gdf["F1"] >= max_f1]
+    #     max_dfs.append(gdf)
+    # result_df = pd.concat(max_dfs)
     sort_by = ["Dataset", "Dims", "Approach"]
     result_df = result_df.sort_values(by=sort_by)
-    print(result_df.groupby(["Dataset", "Approach"]).mean().round(
+    print(result_df.groupby(["Dataset", "Approach", "Dims"]).mean().round(
         decimals={"F1 (Subspace)": 2, "Prec. (Region)": 2, "Rec. (Region)": 2, "Jaccard": 2, "Pearson R": 2}
-    ).to_latex())
+    ))
     result_df.fillna(0.0, inplace=True)
     result_df = result_df.sort_values(by=["Dims", "Dataset"])
     result_df = result_df.astype(dtype={"Dims": str})
@@ -132,9 +153,14 @@ if __name__ == '__main__':
     result_df = result_df[result_df["Dataset"] != "Average"]
     result_df["Approach"][result_df["Approach"] == "ABCD2"] = "ABCD"
     n_colors = len(np.unique(result_df["Dims"]))
-    sns.relplot(data=result_df.reset_index(), x="Pearson R", y="F1 (Subspace)", hue="Dims",
+
+    # melted_df = pd.melt(result_df, id_vars=["Dataset", "Approach"], value_vars=["Jaccard", "Pearson R"],
+    #                     var_name="Metric", value_name="Value")
+    # sns.catplot(data=melted_df, x="Approach", y="Value", col="Dataset", row="Metric", kind="bar")
+
+    sns.relplot(data=result_df.reset_index(), x="Pearson R", y="Jaccard", hue="Dims",
                 style="Approach", col="Dataset", kind="scatter",
-                height=1.75, palette=sns.cubehelix_palette(n_colors=n_colors),
+                height=2, palette=sns.cubehelix_palette(n_colors=n_colors),
                 alpha=0.8)
     for ax in plt.gcf().axes:
         ax.axhline(0, c="black", lw=0.3, linestyle="dashed")
@@ -142,6 +168,7 @@ if __name__ == '__main__':
     # plt.tight_layout()
     for ax in plt.gcf().axes:
         ax.set_title(ax.get_title().split(" = ")[1])
-    plt.subplots_adjust(left=0.08)
+    # plt.gcf().set_size_inches(3.3 * 2, 2)
+    # plt.tight_layout()
     plt.savefig(os.path.join("..", "figures", "evaluation_drift_region.pdf"))
     plt.show()

@@ -35,9 +35,12 @@ if __name__ == '__main__':
             df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",", index_col=False).convert_dtypes()
             df = fill_df(df)
             approach = np.unique(df["approach"])[0]
+            if not "ABCD" in approach:
+                continue
             params = np.unique(df["parameters"])[0]
             dataset = np.unique(df["dataset"])[0]
             dims = np.unique(df["ndims"])[0]
+            df = df[df["change-point"]]
             if "ABCD" in approach:
                 parsed_params = get_abcd_hyperparameters_from_str(params)
                 delta, E, eta = parsed_params[0], parsed_params[1], parsed_params[2]
@@ -56,26 +59,42 @@ if __name__ == '__main__':
                                                           "approach", "has changed", "p-value"])
         result_df.to_csv(os.path.join(cache_dir, "cached-p-values.csv"), index=False)
 
-    steps = 10
+    steps = 30
     max_thresh = 2
     evaluated_thresholds = max_thresh - max_thresh * np.arange(steps + 1) / steps
     result = []
     groupby = ["dataset", "approach", "params", "rep"]
+    # result_df = result_df[result_df["dataset"] != "RBF"]
     for keys, gdf in result_df.groupby(groupby):
         gt = gdf["has changed"]
         p = gdf["p-value"]
         for thresh in evaluated_thresholds:
+            assert p.shape == gt.shape
             subspaces = p < thresh
-            tp = np.sum(np.logical_and(subspaces, gt))
-            fp = np.sum(np.logical_and(subspaces, np.invert(gt)))
-            fn = np.sum(np.logical_and(np.invert(subspaces), gt))
-            prec = tp / (tp + fp)
-            rec = tp / (tp + fn)
-            f1 = 2 * prec * rec / (prec + rec)
-            result.append(list(keys) + [prec, rec, f1, thresh])
-    result = pd.DataFrame(result, columns=groupby + ["precision", "recall", "f1", "threshold"])
-    sns.lineplot(data=result, x="threshold", y="f1", hue="dataset",
-                 palette=sns.cubehelix_palette(n_colors=len(np.unique(result["dataset"]))))
-    plt.gcf().set_size_inches((3.33, 2))
+            found_indices = subspaces[subspaces].index
+            gt_indices = gt[gt].index
+            intersect = np.intersect1d(gt_indices, found_indices)
+            union = np.union1d(found_indices, gt_indices)
+            jaccard = len(intersect) / len(union)
+            # tp = np.sum(np.logical_and(subspaces, gt))
+            # fp = np.sum(np.logical_and(subspaces, np.invert(gt)))
+            # fn = np.sum(np.logical_and(np.invert(subspaces), gt))
+            # prec = tp / (tp + fp)
+            # rec = tp / (tp + fn)
+            # f1 = 2 * prec * rec / (prec + rec)
+            result.append(list(keys) + [jaccard, thresh])
+    result = pd.DataFrame(result, columns=groupby + ["Jaccard", r"$\delta_j$"])
+    sns.set_palette("Dark2_r")
+    sns.lineplot(data=result, x=r"$\delta_j$", y="Jaccard", hue="dataset")
+    plt.gcf().set_size_inches((3.33, 3.33 * 3 / 5))
+    plt.legend(bbox_to_anchor=(1.04, 1), borderaxespad=0, fancybox=False)
+    auxiliary_df = result.groupby(["dataset", r"$\delta_j$"]).mean().reset_index()
+    maxima_indices = auxiliary_df.groupby("dataset")["Jaccard"].idxmax()
+    hline_positions = auxiliary_df[r"$\delta_j$"].loc[maxima_indices]
+    for line, pos in zip(plt.gca().get_lines(), hline_positions):
+        c = line.get_c()
+        plt.axvline(pos, color=c, lw=0.7, ls="dashed")
+    plt.tight_layout()
+    plt.savefig(os.path.join(os.getcwd(), "..", "figures", "delta_j_sensitivity.pdf"))
     plt.show()
 

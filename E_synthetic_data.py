@@ -14,13 +14,13 @@ ename = "synthetic_data"
 
 if __name__ == '__main__':
     parameter_choices = {
-        ABCD: {"encoding_factor": [0.3, 0.5, 0.7],
+        ABCD: {"encoding_factor": [0.5, 0.3, 0.7],
                "delta": [0.2, 0.05, 0.01],
-               "update_epochs": [20, 50, 100],
+               "update_epochs": [50, 20, 100],
                "bonferroni": [False],
-               "split_type": ["exp"]},
-        AdwinK: {"k": [0.1, 0.2, 0.3], "delta": [0.05]},
-        D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9], "tree_depth": [1]},  # tree_depths > 1 are too sensitive...
+               "split_type": ["ed"]},
+        # AdwinK: {"k": [0.1, 0.2, 0.3], "delta": [0.05]},
+        # D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9], "tree_depth": [1]},  # tree_depths > 1 are too sensitive...
     }
 
     algorithms = {

@@ -106,7 +106,7 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
     result_df = result_df[["Dataset", "Dims", "Approach", "Parameters", "F0.5", "F1", "F2", "Prec.", "Rec.",
                            "MTD", "MTPO [ms]"]]
-    result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
+    result_df = result_df.groupby(["Dataset", "Approach"]).mean().reset_index()
     if print_summary:
         result_df["MTD"] = 1 / result_df["MTD"]
         summary_best = result_df.groupby(["Dataset", "Approach"]).max().reset_index()
@@ -134,11 +134,11 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
         summary.drop(["Parameters", "Dims", "MTPO [ms]", "Prec.", "Rec."], axis=1, inplace=True)
         print(summary.set_index(["Dataset", "Approach"]).to_latex(escape=False))
     abcd = result_df[result_df["Approach"] == "ABCD2"]
-    abcd["E"] = abcd["E"].astype(int)
+    abcd[r"$E$"] = abcd["E"].astype(int)
     # average = abcd.groupby(["Approach", "E", r"$\eta$"]).mean().reset_index()
     # average["Dataset"] = "Average"
     # abcd = pd.concat([abcd, average], axis=0)
-    g = sns.catplot(x="E", y="F1",
+    g = sns.catplot(x=r"$E$", y="F1",
                     hue=r"$\eta$", col="Dataset",
                     data=abcd, kind="point", palette=sns.cubehelix_palette(n_colors=3),
                     height=1.75, aspect=5 / 7 * 0.8 * 1.1, errwidth=2, scale=0.5)

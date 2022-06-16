@@ -1,6 +1,6 @@
 import numpy as np
 from components.std import PairwiseVariance
-from exp_logging.logger import ExperimentLogger
+from exp_logging.logger import ExperimentLogger, logger
 
 
 def epsilon_cut_hoeffding(card_w1, card_w2, delta: float):
@@ -25,7 +25,7 @@ def p_chernoff(eps, sigma1, sigma2):
     return 2 * np.exp(exponent)
 
 
-def p_bernstein(eps, n1, n2, sigma1, sigma2, abs_max: float = 1.0):
+def p_bernstein(eps, n1, n2, sigma1, sigma2, abs_max: float = 0.1):
     k = n2 / (n1 + n2)
 
     def exponent(eps, n, sigma, k, M):
@@ -33,13 +33,13 @@ def p_bernstein(eps, n1, n2, sigma1, sigma2, abs_max: float = 1.0):
 
     e1 = exponent(eps, n1, sigma1, k, abs_max)
     e2 = exponent(eps, n2, sigma2, 1 - k, abs_max)
-    res = np.exp(e1) + np.exp(e2)
+    res = 2 * (np.exp(e1) + np.exp(e2))
     return res
 
 
 class AdaptiveWindow:
     def __init__(self, delta: float, bound: str, max_size: int = np.infty,
-                 split_type: str = "all", bonferroni: bool = True, reservoir_size: int = 200):
+                 split_type: str = "all", bonferroni: bool = True, reservoir_size: int = 200, n_splits: int = 50):
         """
         :param delta: The error rate
         :param bound: The bound, 'hoeffding', 'chernoff', or 'bernstein'
@@ -53,6 +53,7 @@ class AdaptiveWindow:
         self.bound = bound
         self.min_p_value = 1.0
         self._argmin_p_value = 0
+        self.n_splits = n_splits
         self.variance_tracker = PairwiseVariance(max_size=max_size)
         self.max_size = max_size
         self.split_type = split_type
@@ -132,6 +133,7 @@ class AdaptiveWindow:
         d = self._delta_bonferroni() if self.bonferroni else self.delta
         has_change = self.min_p_value < d
         self.t_star = self._cut_index()
+        self.logger.track_p(self.min_p_value)
         if has_change:
             return has_change, self.n_seen_items
         else:
@@ -147,7 +149,15 @@ class AdaptiveWindow:
             return
         k_min = int(self.min_window_size / 2)
         k_max = len(self.variance_tracker) - k_min
-        if self.split_type == "exp":
+        if self.split_type == "ed":
+            interval = k_max - k_min
+            n_points = self.n_splits
+            if interval < n_points:
+                self._cut_indices = np.arange(k_min, k_max + 1)
+            else:
+                dist = int(interval / n_points)
+                self._cut_indices = np.arange(k_min, k_max + 1, dist)[-dist:]
+        elif self.split_type == "exp":
             n_points = int(np.log(k_max - k_min)) + 1
             indices = [k_max - 2 ** i + 1 for i in range(n_points)]
             indices = [indices[-i] for i in range(n_points)]
