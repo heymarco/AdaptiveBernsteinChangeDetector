@@ -52,15 +52,17 @@ if __name__ == '__main__':
                     if pd.isna(row["dims-p"]) or pd.isna(row["dims-gt"]):
                         continue
                     gt = str_to_arr(row["dims-gt"], dtype=int)
+                    if len(gt) == 0:
+                        print("No change subspace in ground truth of dataset {}!".format(dataset))
                     p = str_to_arr(row["dims-p"], dtype=float)
                     for i in range(dims):
-                        result_df.append([dataset, delta, E, eta, rep, dims, i, params, approach, i + 1 in gt, p[i]])
+                        result_df.append([dataset, delta, E, eta, rep, dims, i, params, approach, i in gt, p[i]])
         result_df = pd.DataFrame(data=result_df, columns=["dataset", "delta", "E", "eta", "rep", "dims", "dim", "params",
                                                           "approach", "has changed", "p-value"])
         result_df.to_csv(os.path.join(cache_dir, "cached-p-values.csv"), index=False)
 
-    steps = 30
-    max_thresh = 2
+    steps = 10
+    max_thresh = 4
     evaluated_thresholds = max_thresh - max_thresh * np.arange(steps + 1) / steps
     result = []
     groupby = ["dataset", "approach", "params", "rep"]
