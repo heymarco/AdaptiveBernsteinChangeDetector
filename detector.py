@@ -17,7 +17,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
                  update_epochs: int = 20,
                  split_type: str = "exp",
                  new_ae: bool = True,
-                 subspace_threshold: float = 1.0,
+                 subspace_threshold: float = 2.1,
                  bonferroni: bool = False,
                  encoding_factor: float = 0.7,
                  num_splits: int = 50,
