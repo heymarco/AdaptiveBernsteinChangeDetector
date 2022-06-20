@@ -16,8 +16,9 @@ if __name__ == '__main__':
         # AdwinK: {"k": [0.1, 0.2, 0.3], "delta": [0.05]},
         # WATCH: {"kappa": [100], "mu": [1000, 2000], "epsilon": [2, 3], "omega": [500, 1000]},
         # IBDD: {"w": [100, 200, 300], "m": [10, 20, 50, 100]},  # already tuned manually... other values work very bad.
-        # D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9], "tree_depth": [1]}, # tree_depths > 1 are too sensitive...
-        ABCD: {"encoding_factor": [0.5, 0.3, 0.7],
+        # D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9]}, 
+        ABCD: {"model_id": ["kpca", "pca"], 
+               "encoding_factor": [0.5, 0.3, 0.7],
                "delta": [0.2, 0.05, 0.01],
                "update_epochs": [50, 20, 100],
                "bonferroni": [False],
