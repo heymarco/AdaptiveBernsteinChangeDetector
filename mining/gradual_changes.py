@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from matplotlib.ticker import FormatStrFormatter, MaxNLocator
 from tqdm import tqdm
 import seaborn as sns
 
@@ -38,12 +39,12 @@ def compute_jaccard(df: pd.DataFrame):
 
 
 def add_params_to_df(row):
-    if row["Approach"] != "ABCD2":
+    if "ABCD" not in row["Approach"]:
         return row
     params = get_abcd_hyperparameters_from_str(row["Parameters"])
-    _, E, eta, _ = params
-    row[r"$\eta$"] = eta
-    row["E"] = E
+    parsed = params
+    row[r"$\eta$"] = parsed[2]
+    row["E"] = parsed[1]
     return row
 
 
@@ -106,14 +107,14 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
     result_df = result_df[["Dataset", "Dims", "Approach", "Parameters", "F0.5", "F1", "F2", "Prec.", "Rec.",
                            "MTD", "MTPO [ms]"]]
-    result_df = result_df.groupby(["Dataset", "Approach"]).mean().reset_index()
+    result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
     if print_summary:
         result_df["MTD"] = 1 / result_df["MTD"]
         summary_best = result_df.groupby(["Dataset", "Approach"]).max().reset_index()
-        summary_best["Approach"][summary_best["Approach"] == "ABCD2"] = "ABCD (AE, best)"
-        summary_median = result_df[result_df["Approach"] == "ABCD2"]
+        summary_best["Approach"][summary_best["Approach"] == "ABCD0 (ae)"] = "ABCD (AE, best)"
+        summary_median = result_df[result_df["Approach"] == "ABCD0 (ae)"]
         summary_median = summary_median.groupby(["Dataset", "Approach"]).median().reset_index()
-        summary_median["Approach"][summary_median["Approach"] == "ABCD2"] = "ABCD (AE, med)"
+        summary_median["Approach"][summary_median["Approach"] == "ABCD0 (ae)"] = "ABCD (AE, med)"
         summary = pd.concat([summary_best, summary_median])
         summary["MTD"] = 1 / summary["MTD"]
         mean = summary.groupby(["Approach"]).mean().reset_index()
@@ -122,10 +123,10 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
     result_df = result_df.round(decimals={
         "F1": 2, "F0.5": 2, "F2": 2, "Prec.": 2, "Rec.": 2, "MTPO [ms]": 3, "MTTD": 1
     })
-    result_df[result_df["Dataset"] == "Average"] = 0
     sort_by = ["Dims", "Dataset", "Approach", "Parameters"]
     result_df = result_df.sort_values(by=sort_by)
     result_df = result_df.apply(func=add_params_to_df, axis=1)
+    # result_df[result_df["Dataset"] == "Average"] = 0
     if print_summary:
         summary = summary.round(decimals={
             "F1": 2, "F0.5": 2, "F2": 2, "Prec.": 2, "Rec.": 2, "MTPO [ms]": 3, "MTD": 1
@@ -133,21 +134,24 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
         summary = summary.sort_values(by=sort_by)
         summary.drop(["Parameters", "Dims", "MTPO [ms]", "Prec.", "Rec."], axis=1, inplace=True)
         print(summary.set_index(["Dataset", "Approach"]).to_latex(escape=False))
-    abcd = result_df[result_df["Approach"] == "ABCD2"]
+    abcd = result_df[result_df["Approach"] == "ABCD0 (ae)"]
     abcd[r"$E$"] = abcd["E"].astype(int)
-    # average = abcd.groupby(["Approach", "E", r"$\eta$"]).mean().reset_index()
-    # average["Dataset"] = "Average"
-    # abcd = pd.concat([abcd, average], axis=0)
-    g = sns.catplot(x=r"$E$", y="F1",
-                    hue=r"$\eta$", col="Dataset",
-                    data=abcd, kind="point", palette=sns.cubehelix_palette(n_colors=3),
-                    height=1.75, aspect=5 / 7 * 0.8 * 1.1, errwidth=2, scale=0.5)
+    average = abcd.groupby(["Approach", "Parameters", "E", r"$\eta$"]).mean().reset_index()
+    average["Dataset"] = "Average"
+    abcd = pd.concat([abcd, average], axis=0)
+    abcd[r"$E$"] = abcd[r"$E$"].astype(int)
+    g = sns.catplot(hue=r"$E$", y="F1",
+                    x=r"$\eta$", col="Dataset", errwidth=1,
+                    data=abcd, kind="bar", palette=sns.cubehelix_palette(n_colors=3),
+                    height=1.75, aspect=5 / 8 * 0.8 * 1.1)
     axes = plt.gcf().axes
+    plt.gcf().subplots_adjust(left=0.08)
     for ax in axes:
+        ax.set_ylim(0.4, 1.0)
         current_title = ax.get_title()
         dataset = current_title.split(" = ")[1]
         ax.set_title(dataset)
-    plt.gcf().subplots_adjust(left=0.08)
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study.pdf"))
     plt.show()
 
@@ -177,7 +181,7 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
             continue
         max_index = gdf["F1"].idxmax()
         indices.append(max_index)
-        if "ABCD2" in gdf["Approach"].to_numpy():
+        if "ABCD0" in gdf["Approach"].to_numpy():
             max_indices.append(max_index)
             if median:
                 med = gdf["F1"].dropna().median()
