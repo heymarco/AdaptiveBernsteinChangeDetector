@@ -7,7 +7,8 @@ import pandas as pd
 from tqdm import tqdm
 
 from E_abcd_runtime_comparison import ename
-from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, get_E_and_eta
+from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, get_E_and_eta, \
+    get_abcd_hyperparameters_from_str
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
@@ -38,13 +39,16 @@ if __name__ == '__main__':
         result_df[r"$|\mathcal{W}|$"] = np.nan
         result_df[r"$\eta$"] = np.nan
         result_df["MTPO"] = np.nan
-        for (approach, rep, params, ndims), rep_data in result_df.groupby(["approach", "parameters", "rep", "ndims"]):
+        result_df[r"$k_{max}$"] = ""
+        for (approach, params, rep, ndims), rep_data in result_df.groupby(["approach", "parameters", "rep", "ndims"]):
             print(approach, rep, params, len(rep_data))
-            eta = get_E_and_eta(rep_data["parameters"].iloc[0])[1]
+            eta = get_E_and_eta(params)[1]
+            n_splits = get_abcd_hyperparameters_from_str(params)[-1]
             rep_data[r"$\eta$"] = eta
             rep_data["time"] = rep_data["time"] - rep_data["time"].iloc[0]
             rep_data[r"$|\mathcal{W}|$"] = np.arange(len(rep_data))
             rep_data["MTPO"] = rep_data["time"].diff()
+            rep_data[r"$k_{max}$"] = "{}".format(n_splits) if "st = ed" in params else "all"
             result_df.loc[rep_data.index] = rep_data
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
     result_df["time"] = result_df["time"] / 10E6  # milliseconds
@@ -52,12 +56,11 @@ if __name__ == '__main__':
     result_df = result_df[result_df["MTPO [ms]"] < 100]
     result_df[r"$d$"] = result_df["ndims"].astype(int)
     result_df["Approach"] = result_df["approach"]
-    result_df["Approach"][result_df["Approach"] == "ABCD"] = "ABCD0"
     result_df["Approach"][result_df["Approach"] == "ABCD2"] = "ABCD"
-    result_df = result_df.groupby(["Approach", "parameters", "rep", r"$d$", r"$\eta$"]).rolling(100).mean()
+    result_df = result_df.groupby(["Approach", "parameters", "rep", r"$d$", r"$\eta$", r"$k_{max}$"]).rolling(100).mean()
     sns.relplot(data=result_df, x=r"$|\mathcal{W}|$", y="MTPO [ms]", ci=None,
-                style="Approach", hue=r"$\eta$", col=r"$d$", kind="line", lw=1,
-                height=1.75, aspect=0.8 * 5 / 3)
+                style=r"$k_{max}$", hue=r"$\eta$", col=r"$d$", kind="line", lw=1,
+                height=1.75, aspect=0.8 * 5 / 3, palette=sns.cubehelix_palette(n_colors=3))
     plt.yscale("log")
     plt.xscale("log")
     plt.subplots_adjust(top=0.85, bottom=0.3, left=0.1, right=0.83)

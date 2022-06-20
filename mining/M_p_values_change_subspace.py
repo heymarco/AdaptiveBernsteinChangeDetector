@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import pandas as pd
+from matplotlib.ticker import FormatStrFormatter
 
 from tqdm import tqdm
 import seaborn as sns
@@ -9,7 +10,7 @@ import matplotlib.pyplot as plt
 
 from E_synthetic_data import ename
 from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, \
-    get_abcd_hyperparameters_from_str, cm2inch
+    get_abcd_hyperparameters_from_str, cm2inch, move_legend_below_graph
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
@@ -61,7 +62,7 @@ if __name__ == '__main__':
                                                           "approach", "has changed", "p-value"])
         result_df.to_csv(os.path.join(cache_dir, "cached-p-values.csv"), index=False)
 
-    steps = 40
+    steps = 10
     max_thresh = 4
     evaluated_thresholds = max_thresh - max_thresh * np.arange(steps + 1) / steps
     result = []
@@ -78,6 +79,9 @@ if __name__ == '__main__':
             intersect = np.intersect1d(gt_indices, found_indices)
             union = np.union1d(found_indices, gt_indices)
             jaccard = len(intersect) / len(union)
+            prec = 0
+            rec = 0
+            f1 = 0
             tp = np.sum(np.logical_and(subspaces, gt))
             fp = np.sum(np.logical_and(subspaces, np.invert(gt)))
             fn = np.sum(np.logical_and(np.invert(subspaces), gt))
@@ -91,22 +95,22 @@ if __name__ == '__main__':
     result = pd.concat([result, avg_df]).reset_index()
     result = result.sort_values(by=["dataset"], ascending=False)
     n_colors = len(np.unique(result["dataset"]))
-    palette = sns.color_palette("Dark2_r", n_colors=n_colors-1)
-    palette.append("black")
-    # result = result.melt(id_vars=["dataset", "approach", "params", "rep", r"$\delta_j$"],
-    #                      value_vars=["Jaccard", "Prec.", "Rec.", "F1"],
-    #                      var_name="Metric", value_name="Value")
-    # sns.lineplot(data=result, x=r"$\delta_j$", y="Value", hue="dataset", style="Metric")
-    auxiliary_df = result.groupby(["dataset", r"$\delta_j$"]).mean().reset_index()
-    maxima_indices = auxiliary_df.groupby("dataset")["Jaccard"].idxmax()
-    hline_positions = auxiliary_df[r"$\delta_j$"].loc[maxima_indices]
-    for i, pos in enumerate(hline_positions):
-        c = palette[i]
-        plt.axvline(pos, color=c, lw=0.7, ls="dashed")
-    sns.lineplot(data=result, x=r"$\delta_j$", y="Jaccard", hue="dataset", palette=palette)
-    plt.gcf().set_size_inches((3.33, 3.33 * 3 / 5))
-    plt.legend(bbox_to_anchor=(1.04, 1), borderaxespad=0, fancybox=False)
+    sns.set_palette(sns.cubehelix_palette())
+    result = result.melt(id_vars=["dataset", "approach", "params", "rep", r"$\delta_j$"],
+                         value_vars=["Jaccard", "Prec.", "Rec.", "F1"],
+                         var_name="Metric", value_name="Score")
+    result = result[result["Metric"] != "Jaccard"].sort_values(by="Metric").sort_values(by="dataset")
+    g = sns.relplot(data=result, x=r"$\delta_j$", y="Score", hue="dataset", col="Metric", kind="line", legend=False)
+    plt.gcf().set_size_inches((3.5, 2))
+    lines = g.figure.axes[-1].get_lines()
+    labels = np.sort(np.unique(result["dataset"]))[::-1]
+    plt.figlegend(lines, labels, loc='lower center', frameon=False, ncol=3, title=None)
+    for i, ax in enumerate(g.figure.axes):
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        col_title = ax.get_title().split(" = ")[-1]
+        ax.set_title(col_title)
     plt.tight_layout()
+    plt.subplots_adjust(bottom=0.47)
     plt.savefig(os.path.join(os.getcwd(), "..", "figures", "delta_j_sensitivity.pdf"))
     plt.show()
 

@@ -2,6 +2,8 @@ import os
 
 import numpy as np
 import pandas as pd
+from matplotlib.ticker import FormatStrFormatter
+
 from changeds.metrics import fb_score, jaccard, true_positives, false_positives, precision, recall, false_negatives
 from scipy.stats import spearmanr, pearsonr
 from tqdm import tqdm
@@ -104,7 +106,7 @@ if __name__ == '__main__':
             dataset = np.unique(df["dataset"])[0]
             dims = np.unique(df["ndims"])[0]
             severity = compute_severity_metric(df)
-            if "ABCD" in approach:
+            if "ABCD" in approach or "ABCD0" in approach:
                 parsed_params = get_abcd_hyperparameters_from_str(params)
                 E, eta = parsed_params[1], parsed_params[2]
             else:
@@ -134,41 +136,58 @@ if __name__ == '__main__':
         result_df = pd.DataFrame(result_df, columns=["Rep", "Dataset", "Dims", "Approach", "Parameters", "E", "eta", "F1 (Subspace)", "Prec. (Region)",
                                                      "Rec. (Region)", "Jaccard", "Pearson R", "F1"])
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
+    # result_df.groupby(["Dataset", "Approach", "Dims"])["Pearson R"].fillna(method="ffill", inplace=True)
+    result_df = result_df[result_df["Dataset"] != "RBF"]
+    for _, gdf in result_df.groupby(["Approach", "Dataset", "Dims"]):
+        index = gdf.index
+        gdf = gdf["Pearson R"].fillna(method="ffill")
+        result_df["Pearson R"].loc[index] = gdf
     result_df = result_df.groupby(["Dataset", "Approach", "Parameters", "Dims"]).mean().reset_index()
-    # max_dfs = []
+    # med_dfs = []
     # for _, gdf in result_df.groupby(["Dataset", "Approach", "Dims"]):
-    #     max_f1 = gdf["F1"].median()
-    #     gdf = gdf[gdf["F1"] >= max_f1]
-    #     max_dfs.append(gdf)
-    # result_df = pd.concat(max_dfs)
+    #     med_f1 = gdf["F1"].median()
+    #     gdf["Pearson R"][gdf["F1"] < med_f1] = np.nan
+    #     gdf["Jaccard"][gdf["F1"] < med_f1] = np.nan
+    #     med_dfs.append(gdf)
+    # result_df = pd.concat(med_dfs)
     sort_by = ["Dataset", "Dims", "Approach"]
     result_df = result_df.sort_values(by=sort_by)
     print(result_df.groupby(["Dataset", "Approach", "Dims"]).mean().round(
         decimals={"F1 (Subspace)": 2, "Prec. (Region)": 2, "Rec. (Region)": 2, "Jaccard": 2, "Pearson R": 2}
     ))
-    result_df.fillna(0.0, inplace=True)
     result_df = result_df.sort_values(by=["Dims", "Dataset"])
     result_df = result_df.astype(dtype={"Dims": str})
     result_df["Pearson R"][result_df["Approach"] == "D3"] = result_df[result_df["Approach"] == "D3"]["Pearson R"]
     result_df = result_df[result_df["Dataset"] != "Average"]
-    result_df["Approach"][result_df["Approach"] == "ABCD2"] = "ABCD"
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (ae)"] = "ABCD"
     n_colors = len(np.unique(result_df["Dims"]))
-
-    # melted_df = pd.melt(result_df, id_vars=["Dataset", "Approach"], value_vars=["Jaccard", "Pearson R"],
-    #                     var_name="Metric", value_name="Value")
-    # sns.catplot(data=melted_df, x="Approach", y="Value", col="Dataset", row="Metric", kind="bar")
-
-    sns.relplot(data=result_df.reset_index(), x="Pearson R", y="Jaccard", hue="Dims",
-                style="Approach", col="Dataset", kind="scatter",
-                height=2, palette=sns.cubehelix_palette(n_colors=n_colors),
-                alpha=0.8)
-    for ax in plt.gcf().axes:
-        ax.axhline(0, c="black", lw=0.3, linestyle="dashed")
-        ax.axvline(0, c="black", lw=0.3, linestyle="dashed")
-    # plt.tight_layout()
-    for ax in plt.gcf().axes:
-        ax.set_title(ax.get_title().split(" = ")[1])
-    # plt.gcf().set_size_inches(3.3 * 2, 2)
-    # plt.tight_layout()
+    sns.set_palette(sns.cubehelix_palette(n_colors=n_colors+1))
+    melted_df = pd.melt(result_df, id_vars=["Dataset", "Approach"], value_vars=["F1", "Jaccard", "Pearson R"],
+                        var_name="Metric", value_name="Value")
+    melted_df = melted_df[melted_df["Value"].isna() == False]
+    g = sns.catplot(data=melted_df, x="Approach", y="Value", col="Dataset", row="Metric", kind="box",
+                    linewidth=0.7, fliersize=2, sharey="row")
+    g.set(xlabel=None)
+    for i, ax in enumerate(plt.gcf().axes):
+        ax.set_xticks(ax.get_xticks())
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        if i == 0:
+            ax.set_ylabel("F1")
+        if i == 4:
+            ax.set_ylabel("Jaccard")
+        if i == 8:
+            ax.set_ylabel("Pearson R")
+        if i < 4:
+            col_title = ax.get_title().split(" = ")[-1]
+            if col_title.startswith("Normal"):
+                a, b = col_title.split("al")
+                col_title = a + "." + b
+            ax.set_title(col_title)
+        else:
+            ax.set_title("")
+    plt.gcf().set_size_inches(3.5, 3.5 * 1.2)
+    plt.tight_layout()
+    plt.subplots_adjust(left=0.16, wspace=0.15, right=0.99)
     plt.savefig(os.path.join("..", "figures", "evaluation_drift_region.pdf"))
     plt.show()

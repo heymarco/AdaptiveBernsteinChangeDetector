@@ -58,7 +58,8 @@ def get_last_experiment_dir(name: str):
 
 
 def move_legend_below_graph(axes, ncol: int, title: str):
-    handles, labels = axes.flatten()[-1].get_legend_handles_labels()
+    axes = axes.flatten()
+    handles, labels = axes[-1].get_legend_handles_labels()
     for ax in axes:
         if ax.get_legend():
             ax.get_legend().remove()
@@ -138,3 +139,4 @@ def cm2inch(*tupl):
         return tuple(i/inch for i in tupl[0])
     else:
         return tuple(i/inch for i in tupl)
+
