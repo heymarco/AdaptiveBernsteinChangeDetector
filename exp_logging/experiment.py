@@ -20,15 +20,13 @@ class Experiment:
                  datasets: dict,
                  algorithm_timeout: float = 10 * 60,  # 30 minutes
                  reps: int = 1,
-                 condense_results: bool = False,
-                 n_jobs: int = 1000):
+                 condense_results: bool = False):
         self.name = name
         self.configurations = configurations
         self.datasets = datasets
         self.algorithm_timeout = algorithm_timeout
         self.reps = reps
         self.condense_results = condense_results
-        self.n_jobs = n_jobs
         new_dir_for_experiment_with_name(name)
         all_configs = []
         all_ds_configs = []
@@ -38,7 +36,7 @@ class Experiment:
             all_configs += conf
         self.total_runs = len(all_ds_configs) * len(all_configs)
 
-    def run(self, warm_start: int = 100, parallel: bool = True):
+    def run(self, warm_start: int = 100, parallel: bool = True, n_jobs: int = 1000):
         i = 1
         for dataset_class in self.datasets.keys():
             for ds_config in self.datasets[dataset_class]:
@@ -47,13 +45,15 @@ class Experiment:
                         alg = algorithm(**config)
                         print("{}/{}: Run {} with {} on {}".format(i, self.total_runs, alg.name(),
                                                                    alg.parameter_str(), str(dataset_class)))
-                        self.repeat(alg, (dataset_class, ds_config), warm_start=warm_start, parallel=parallel)
+                        self.repeat(alg, (dataset_class, ds_config), warm_start=warm_start,
+                                    parallel=parallel, n_jobs=n_jobs)
                         i += 1
 
-    def repeat(self, detector: DriftDetector, data: Tuple, warm_start: int = 100, parallel: bool = True):
+    def repeat(self, detector: DriftDetector, data: Tuple, warm_start: int = 100,
+               parallel: bool = True, n_jobs: int = 1000):
         data_class, data_config = data
         if parallel:
-            njobs = min(self.reps, self.n_jobs, psutil.cpu_count() - 1)
+            njobs = min(self.reps, n_jobs, psutil.cpu_count() - 1)
             args_list = []
             for rep in range(self.reps):
                 data_config["seed"] = rep
