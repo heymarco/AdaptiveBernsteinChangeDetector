@@ -29,7 +29,9 @@ def p_bernstein(eps, n1, n2, sigma1, sigma2, abs_max: float = 0.1):
     k = n2 / (n1 + n2)
 
     def exponent(eps, n, sigma, k, M):
-        return -(n * (k * eps) ** 2) / (2 * (sigma ** 2 + (M * k * eps) / 3))
+        a = sigma ** 2
+        b = (M * k * eps) / 3
+        return -(n * (k * eps) ** 2) / (2 * (a + b))
 
     e1 = exponent(eps, n1, sigma1, k, abs_max)
     e2 = exponent(eps, n2, sigma2, 1 - k, abs_max)

@@ -20,13 +20,15 @@ class Experiment:
                  datasets: dict,
                  algorithm_timeout: float = 10 * 60,  # 30 minutes
                  reps: int = 1,
-                 condense_results: bool = False):
+                 condense_results: bool = False,
+                 n_jobs: int = 1000):
         self.name = name
         self.configurations = configurations
         self.datasets = datasets
         self.algorithm_timeout = algorithm_timeout
         self.reps = reps
         self.condense_results = condense_results
+        self.n_jobs = n_jobs
         new_dir_for_experiment_with_name(name)
         all_configs = []
         all_ds_configs = []
@@ -51,7 +53,7 @@ class Experiment:
     def repeat(self, detector: DriftDetector, data: Tuple, warm_start: int = 100, parallel: bool = True):
         data_class, data_config = data
         if parallel:
-            njobs = min(self.reps, psutil.cpu_count() - 1)
+            njobs = min(self.reps, self.n_jobs, psutil.cpu_count() - 1)
             args_list = []
             for rep in range(self.reps):
                 data_config["seed"] = rep
