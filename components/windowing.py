@@ -31,10 +31,14 @@ def p_bernstein(eps, n1, n2, sigma1, sigma2, abs_max: float = 0.1):
     def exponent(eps, n, sigma, k, M):
         a = sigma ** 2
         b = (M * k * eps) / 3
+        a += 1e-10  # add some small positive value to avoid dividing by 0 in some rare cases.
+        b += 1e-10
         return -(n * (k * eps) ** 2) / (2 * (a + b))
 
     e1 = exponent(eps, n1, sigma1, k, abs_max)
     e2 = exponent(eps, n2, sigma2, 1 - k, abs_max)
+    if np.any(np.isnan(e1)) or np.any(np.isnan(e2)):
+        print("nan value in exponent")
     res = 2 * (np.exp(e1) + np.exp(e2))
     return res
 
@@ -158,11 +162,11 @@ class AdaptiveWindow:
                 self._cut_indices = np.arange(k_min, k_max + 1)
             else:
                 dist = int(interval / n_points)
-                self._cut_indices = np.arange(k_min, k_max + 1, dist)[-n_points:]
+                cut_indices = np.arange(k_min, k_max + 1, dist)[-n_points:]
+                self._cut_indices = cut_indices
         elif self.split_type == "exp":
             n_points = int(np.log(k_max - k_min)) + 1
             indices = [k_max - 2 ** i + 1 for i in range(n_points)]
-            indices = [indices[-i] for i in range(n_points)]
             # Always include the current best guess about the change point
             if self._argmin_p_value:
                 best_cut_index = self._cut_index(self._argmin_p_value)
