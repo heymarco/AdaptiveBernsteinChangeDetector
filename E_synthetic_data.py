@@ -24,7 +24,7 @@ if __name__ == '__main__':
         # IBDD: {"w": [100, 200, 300], "m": [10, 20, 50, 100]},  # already tuned manually... other values work very bad.
         # AdwinK: {"k": [0.1, 0.2, 0.3], "delta": [0.05]},
         # D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9]},
-        IncrementalKS: {"w": [100, 200, 500], "delta": [0.01]}
+        IncrementalKS: {"w": [100, 200, 500], "delta": [0.01, 0.05]}
     }
 
     algorithms = {
