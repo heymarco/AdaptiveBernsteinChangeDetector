@@ -7,9 +7,9 @@ from tqdm import tqdm
 from util import new_dir_for_experiment_with_name
 
 if __name__ == '__main__':
-    ename = "gradual_changes"
-    approaches = ["ABCD0 (ae)", "D3"]
-    folder_nr = 7
+    ename = "abcd_runtime_comparison"
+    approaches = ["ABCD0 (ae)"]
+    folder_nr = 18
     from_dir = os.path.join(os.getcwd(), "results", "experiments", ename, str(folder_nr))
     to_dir = new_dir_for_experiment_with_name(ename)
     all_files = os.listdir(from_dir)

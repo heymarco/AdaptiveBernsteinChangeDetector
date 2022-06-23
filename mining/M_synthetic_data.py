@@ -76,11 +76,11 @@ def compute_severity_metric(df: pd.DataFrame):
     if len(x) < 2 or len(y) < 2:
         return np.nan
     try:
-        corr, p = pearsonr(x, y)
+        corr, p = spearmanr(x, y)
     except:
         x = np.array([float(x_i[1:-1]) for x_i in x.flatten()])
         y = y.flatten().astype(float)
-        corr, p = pearsonr(x, y)
+        corr, p = spearmanr(x, y)
     return corr
 
 
@@ -160,13 +160,14 @@ if __name__ == '__main__':
     result_df["Pearson R"][result_df["Approach"] == "D3"] = result_df[result_df["Approach"] == "D3"]["Pearson R"]
     result_df = result_df[result_df["Dataset"] != "Average"]
     result_df["Approach"][result_df["Approach"] == "ABCD0 (ae)"] = "ABCD"
-    n_colors = len(np.unique(result_df["Dims"]))
-    sns.set_palette(sns.cubehelix_palette(n_colors=n_colors+1))
+    result_df = result_df.sort_values(by="Approach")
+    n_colors = len(np.unique(result_df["Approach"]))
+    palette = sns.cubehelix_palette(n_colors=n_colors)
     melted_df = pd.melt(result_df, id_vars=["Dataset", "Approach"], value_vars=["F1", "Jaccard", "Pearson R"],
                         var_name="Metric", value_name="Value")
     melted_df = melted_df[melted_df["Value"].isna() == False]
     g = sns.catplot(data=melted_df, x="Approach", y="Value", col="Dataset", row="Metric", kind="box",
-                    linewidth=0.7, fliersize=2, sharey="row")
+                    linewidth=0.7, fliersize=2, sharey="row", showfliers=False, palette=palette)
     g.set(xlabel=None)
     for i, ax in enumerate(plt.gcf().axes):
         ax.set_xticks(ax.get_xticks())

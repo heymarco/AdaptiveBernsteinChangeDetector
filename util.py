@@ -1,5 +1,5 @@
 import os
-from multiprocessing import Pool
+from multiprocess import Pool
 from time import sleep
 
 import numpy as np

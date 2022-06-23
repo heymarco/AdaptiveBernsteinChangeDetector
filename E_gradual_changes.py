@@ -4,7 +4,7 @@ from changeds import GradualLED, GradualRBF, GradualMNIST, GradualFashionMNIST, 
     GradualHAR
 
 from detector import ABCD
-from detectors import WATCH, IBDD, D3, AdwinK
+from detectors import WATCH, IBDD, D3, AdwinK, IncrementalKS
 
 from exp_logging.experiment import Experiment
 from util import preprocess
@@ -16,12 +16,15 @@ if __name__ == '__main__':
         # AdwinK: {"k": [0.1, 0.2, 0.3], "delta": [0.05]},
         # WATCH: {"kappa": [100], "mu": [1000, 2000], "epsilon": [2, 3], "omega": [500, 1000]},
         # IBDD: {"w": [100, 200, 300], "m": [10, 20, 50, 100]},  # already tuned manually... other values work very bad.
-        D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9]},
-        ABCD: {"encoding_factor": [0.5, 0.3, 0.7],
-               "delta": [0.2, 0.05, 0.01],
-               "update_epochs": [50, 20, 100],
-               "bonferroni": [False],
-               "split_type": ["ed"]},
+        # D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9]},
+        # ABCD: {"encoding_factor": [0.5], # , 0.3, 0.7
+        #        "delta": [0.05],  # , 0.2, 0.01
+        #        "update_epochs": [50],  # , 20, 100
+        #        "bonferroni": [False],
+        #        "split_type": ["ed"],
+        #        "num_splits": [20],
+        #        "model_id": ["kpca", "pca"]},
+        IncrementalKS: {"w": [100, 200, 500], "delta": [0.01, 0.05]}
     }
 
     algorithms = {
@@ -33,7 +36,7 @@ if __name__ == '__main__':
     drift_length = 300
     dims = 100
     stretch = True
-    n_reps = 30
+    n_reps = 1
     datasets = {
         GradualHAR: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
                       "preprocess": preprocess}],
@@ -49,9 +52,9 @@ if __name__ == '__main__':
         GradualFashionMNIST: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
                                "preprocess": preprocess, "n_per_concept": 2 * n_per_concept}],
         GradualCifar10: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
-                          "preprocess": preprocess, "n_per_concept": 2 * n_per_concept}],
+                          "preprocess": preprocess, "n_per_concept": n_per_concept}],
     }
 
     experiment = Experiment(name=ename, configurations=algorithms, datasets=datasets,
-                            reps=n_reps, condense_results=True, algorithm_timeout=10 * 60)
+                            reps=n_reps, condense_results=False, algorithm_timeout=10 * 60)
     experiment.run(warm_start=100, parallel=True)

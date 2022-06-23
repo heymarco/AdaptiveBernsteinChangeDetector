@@ -92,14 +92,14 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
                 f1 = fb_score(true_cps, reported_cps, T=cp_distance)
                 f05 = fb_score(true_cps, reported_cps, T=cp_distance, beta=0.5)
                 f2 = fb_score(true_cps, reported_cps, T=cp_distance, beta=2)
-                mttd = mean_until_detection(true_cps, reported_cps)
+                MTD = mean_until_detection(true_cps, reported_cps)
                 mae_delay = mean_cp_detection_time_error(true_cps, reported_cps,
                                                          delays) if "ABCD" in approach else np.nan
                 mtpe = mean_time_per_example(rep_data)
                 mtpe = mtpe / 10e6
                 result_df.append([
                     dataset, dims, approach, params, rep, f1, f05, f2, prec, rec,
-                    mttd, mtpe, n_seen_changes, mae_delay
+                    MTD, mtpe, n_seen_changes, mae_delay
                 ])
         result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "rep", "F1", "F0.5",
                                                      "F2", "Prec.", "Rec.", "MTD",
@@ -107,22 +107,24 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
     result_df = result_df[["Dataset", "Dims", "Approach", "Parameters", "F0.5", "F1", "F2", "Prec.", "Rec.",
                            "MTD", "MTPO [ms]"]]
-    result_df = result_df.groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
     if print_summary:
-        result_df["MTD"] = 1 / result_df["MTD"]
-        summary_best = result_df.groupby(["Dataset", "Approach"]).max().reset_index()
-        summary_best["Approach"][summary_best["Approach"] == "ABCD0 (ae)"] = "ABCD (AE, best)"
-        summary_median = result_df[result_df["Approach"] == "ABCD0 (ae)"]
-        summary_median = summary_median.groupby(["Dataset", "Approach"]).median().reset_index()
-        summary_median["Approach"][summary_median["Approach"] == "ABCD0 (ae)"] = "ABCD (AE, med)"
-        summary = pd.concat([summary_best, summary_median])
-        summary["MTD"] = 1 / summary["MTD"]
-        mean = summary.groupby(["Approach"]).mean().reset_index()
-        mean["Dataset"] = "AVG"
-        summary = pd.concat([summary, mean])
-    result_df = result_df.round(decimals={
-        "F1": 2, "F0.5": 2, "F2": 2, "Prec.": 2, "Rec.": 2, "MTPO [ms]": 3, "MTTD": 1
-    })
+        # result_df["MTD"] = 1 / result_df["MTD"]
+        # summary_best = result_df.groupby(["Dataset", "Approach"]).max().reset_index()
+        # result_df["MTD"] = 1 / result_df["MTD"]
+        # summary_best["Approach"][summary_best["Approach"] == "ABCD0 (ae)"] = "ABCD (AE, best)"
+        # summary_median = result_df[result_df["Approach"] == "ABCD0 (ae)"]
+        # summary_median = summary_median.groupby(["Dataset", "Approach"]).median().reset_index()
+        # summary_median["Approach"][summary_median["Approach"] == "ABCD0 (ae)"] = "ABCD (AE, med)"
+        # summary = pd.concat([summary_best, summary_median])
+        # summary["MTD"] = 1 / summary["MTD"]
+        # mean = summary.groupby(["Approach"]).mean().reset_index()
+        # mean["Dataset"] = "AVG"
+        # summary = pd.concat([summary, mean])
+        summary = result_df.copy().groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
+        summary = filter_best(summary, worst=False, median=True)
+    # result_df = result_df.round(decimals={
+    #     "F1": 2, "F0.5": 2, "F2": 2, "Prec.": 2, "Rec.": 2, "MTPO [ms]": 3, "MTD": 1
+    # })
     sort_by = ["Dims", "Dataset", "Approach", "Parameters"]
     result_df = result_df.sort_values(by=sort_by)
     result_df = result_df.apply(func=add_params_to_df, axis=1)
@@ -132,27 +134,71 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
             "F1": 2, "F0.5": 2, "F2": 2, "Prec.": 2, "Rec.": 2, "MTPO [ms]": 3, "MTD": 1
         })
         summary = summary.sort_values(by=sort_by)
-        summary.drop(["Parameters", "Dims", "MTPO [ms]", "Prec.", "Rec."], axis=1, inplace=True)
+        summary.drop(["Parameters", "Dims", "MTPO [ms]", "F0.5", "F2"], axis=1, inplace=True)
         print(summary.set_index(["Dataset", "Approach"]).to_latex(escape=False))
-    abcd = result_df[result_df["Approach"] == "ABCD0 (ae)"]
+    abcd = np.logical_or(result_df["Approach"] == "ABCD0 (ae)",
+                          result_df["Approach"] == "ABCD0 (pca)")
+    abcd = np.logical_or(abcd, result_df["Approach"] == "ABCD0 (kpca)")
+    abcd = result_df[abcd]
     abcd[r"$E$"] = abcd["E"].astype(int)
     average = abcd.groupby(["Approach", "Parameters", "E", r"$\eta$"]).mean().reset_index()
     average["Dataset"] = "Average"
     abcd = pd.concat([abcd, average], axis=0)
     abcd[r"$E$"] = abcd[r"$E$"].astype(int)
     g = sns.catplot(hue=r"$E$", y="F1",
-                    x=r"$\eta$", col="Dataset", errwidth=1,
+                    x=r"$\eta$", col="Dataset", row="Approach", errwidth=1,
                     data=abcd, kind="bar", palette=sns.cubehelix_palette(n_colors=3),
-                    height=1.75, aspect=5 / 8 * 0.8 * 1.1)
+                    height=1, aspect=1)
     axes = plt.gcf().axes
     plt.gcf().subplots_adjust(left=0.08)
-    for ax in axes:
-        ax.set_ylim(0.4, 1.0)
-        current_title = ax.get_title()
-        dataset = current_title.split(" = ")[1]
-        ax.set_title(dataset)
+    for i, ax in enumerate(axes):
+        # ax.set_ylim(0.4, 1.0)
+        if i < 8:
+            current_title = ax.get_title()
+            dataset = current_title.split(" = ")[-1]
+            ax.set_title(dataset)
+        else:
+            ax.set_title("")
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study.pdf"))
+    plt.show()
+
+    result_df = result_df.groupby(["Approach", "Parameters", "Dataset"]).mean().reset_index()
+    mean = result_df.groupby(["Approach", "Parameters"]).mean().reset_index()
+    mean["Dataset"] = "AVG"
+    result_df = pd.concat([mean, result_df])
+    result_df["MTD (thousands)"] = result_df["MTD"] / 1000
+    value_vars = ["F1", "Prec.", "Rec.", "MTD (thousands)"]
+    melted_df = pd.melt(result_df, id_vars=["Dataset", "Approach"], value_vars=value_vars,
+                        var_name="Metric", value_name="Value")
+    melted_df = melted_df[melted_df["Value"].isna() == False]
+    g = sns.catplot(data=melted_df, x="Approach", y="Value", col="Dataset", row="Metric", kind="box",
+                    linewidth=0.7, fliersize=2, sharey="row", palette=sns.cubehelix_palette(n_colors=9))
+    g.set(xlabel=None)
+    for i, ax in enumerate(plt.gcf().axes):
+        ax.set_xticks(ax.get_xticks())
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        # if i == 0:
+        #     ax.set_ylabel("F1")
+        # if i == 7:
+        #     ax.set_ylabel("Jaccard")
+        # if i == 8:
+        #     ax.set_ylabel("Pearson R")
+        if i < 8:
+            col_title = ax.get_title().split(" = ")[-1]
+            if col_title.startswith("Normal"):
+                a, b = col_title.split("al")
+                col_title = a + "." + b
+            ax.set_title(col_title)
+        else:
+            ax.set_title("")
+        if i % 8 == 0:
+            ax.set_ylabel(value_vars[int(i / 8)])
+    plt.gcf().set_size_inches(3.5 * 2.5, 3.5 * 2)
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=0.05)
+    plt.savefig(os.path.join("..", "figures", "evaluation_gradual_changes.pdf"))
     plt.show()
 
 
@@ -165,7 +211,7 @@ def add_mean_column(df: pd.DataFrame):
 
 
 def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
-    df = df.sort_values(by=["F1", "MTTD"])
+    df = df.sort_values(by=["F1", "MTD"])
     median_indices = []
     min_indices = []
     max_indices = []
@@ -181,7 +227,7 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
             continue
         max_index = gdf["F1"].idxmax()
         indices.append(max_index)
-        if "ABCD0" in gdf["Approach"].to_numpy():
+        if "ABCD0 (ae)" in gdf["Approach"].to_numpy():
             max_indices.append(max_index)
             if median:
                 med = gdf["F1"].dropna().median()

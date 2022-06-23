@@ -56,13 +56,17 @@ if __name__ == '__main__':
     result_df = result_df[result_df["MTPO [ms]"] < 100]
     result_df[r"$d$"] = result_df["ndims"].astype(int)
     result_df["Approach"] = result_df["approach"]
-    result_df["Approach"][result_df["Approach"] == "ABCD2"] = "ABCD"
-    result_df = result_df.groupby(["Approach", "parameters", "rep", r"$d$", r"$\eta$", r"$k_{max}$"]).rolling(100).mean()
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (pca)"] = "ABCD (pca)"
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (ae)"] = "ABCD (ae)"
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (kpca)"] = "ABCD (kpca)"
+    result_df = result_df.groupby(["Approach", "parameters", r"$d$", r"$\eta$", r"$k_{max}$", r"$|\mathcal{W}|$"]).mean()
+    result_df = result_df.groupby(["Approach", "parameters", r"$d$", r"$\eta$", r"$k_{max}$"]).rolling(50).mean()
     sns.relplot(data=result_df, x=r"$|\mathcal{W}|$", y="MTPO [ms]", ci=None,
-                style=r"$k_{max}$", hue=r"$\eta$", col=r"$d$", kind="line", lw=1,
-                height=1.75, aspect=0.8 * 5 / 3, palette=sns.cubehelix_palette(n_colors=3))
+                row=r"$k_{max}$", style=r"$\eta$", col=r"$d$", hue="Approach", kind="line", lw=1,
+                height=1.75, aspect=0.8 * 5 / 3, palette=sns.cubehelix_palette(n_colors=4)[1:])
     plt.yscale("log")
-    plt.xscale("log")
+    # plt.xscale("log")
+    plt.tight_layout()
     plt.subplots_adjust(top=0.85, bottom=0.3, left=0.1, right=0.83)
     plt.savefig(os.path.join("..", "figures", "runtime.pdf"))
     plt.show()

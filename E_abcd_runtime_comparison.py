@@ -1,5 +1,7 @@
 import os
 
+from detectors import AdwinK, WATCH, IBDD, D3, IncrementalKS
+
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -21,19 +23,25 @@ ename = "abcd_runtime_comparison"
 
 if __name__ == '__main__':
     parameter_choices = {
-        ABCD: {"encoding_factor": [0.3, 0.5, 0.7],
-               "model_id": ["ae"],
-               "delta": [1E-10],
-               "update_epochs": [50],
+        AdwinK: {"k": [0.1, 0.2, 0.3], "delta": [0.05]},
+        WATCH: {"kappa": [100], "mu": [1000, 2000], "epsilon": [2, 3], "omega": [500, 1000]},
+        IBDD: {"w": [100, 200, 300], "m": [10, 20, 50, 100]},  # already tuned manually... other values work very bad.
+        D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9]},
+        ABCD: {"encoding_factor": [0.5], # , 0.3, 0.7
+               "delta": [0.01],  # , 0.2, 0.01
+               "update_epochs": [50],  # , 20, 100
+               "bonferroni": [False],
                "split_type": ["ed"],
-               "num_splits": [10, 100, 1000]}
+               "num_splits": [20],
+               "model_id": ["kpca", "pca", "ae"]},
+        IncrementalKS: {"w": [100, 200, 500], "delta": [0.01]}
     }
 
     algorithms = {
         alg: list(ParameterGrid(param_grid=parameter_choices[alg])) for alg in parameter_choices
     }
 
-    n_per_concept = 5000
+    n_per_concept = 2000
     num_concepts = 1
     n_reps = 3
     n_dims = [10, 100, 1000]
