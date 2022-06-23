@@ -48,9 +48,9 @@ if __name__ == '__main__':
                       "preprocess": preprocess, "n_per_concept": n_per_concept,
                       "dims": dims, "add_dims_without_drift": True}],
         GradualMNIST: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
-                        "preprocess": preprocess, "n_per_concept": 2 * n_per_concept}],
+                        "preprocess": preprocess, "n_per_concept": n_per_concept}],
         GradualFashionMNIST: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
-                               "preprocess": preprocess, "n_per_concept": 2 * n_per_concept}],
+                               "preprocess": preprocess, "n_per_concept": n_per_concept}],
         GradualCifar10: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
                           "preprocess": preprocess, "n_per_concept": n_per_concept}],
     }

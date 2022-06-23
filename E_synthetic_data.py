@@ -16,11 +16,14 @@ if __name__ == '__main__':
     parameter_choices = {
         # ABCD: {"encoding_factor": [0.5, 0.3, 0.7],
         #        "delta": [0.2, 0.05, 0.01],
-        #        "update_epochs": [50, 20, 100],
+        #        "update_epochs": [50],
+        #        "model_id": ["pca", "kpca"],
         #        "bonferroni": [False],
         #        "split_type": ["ed"]},
+        WATCH: {"kappa": [100, 300], "mu": [1000, 2000], "epsilon": [2, 3], "omega": [100, 500, 1000]},
+        IBDD: {"w": [100, 200, 300], "m": [10, 20, 50, 100]},  # already tuned manually... other values work very bad.
         # AdwinK: {"k": [0.1, 0.2, 0.3], "delta": [0.05]},
-        D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9]},
+        # D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9]},
     }
 
     algorithms = {
@@ -32,8 +35,8 @@ if __name__ == '__main__':
     n_reps = 30
     n_dims = [24, 100, 500]
     datasets = {
-        RBF: [{"num_concepts": num_concepts, "dims": d, "preprocess": preprocess, "n_per_concept": n_per_concept}
-              for d in n_dims],
+        # RBF: [{"num_concepts": num_concepts, "dims": d, "preprocess": preprocess, "n_per_concept": n_per_concept}
+        #       for d in n_dims],
         Gaussian: [{
             "num_concepts": num_concepts, "n_per_concept": n_per_concept,
             "dims": d, "preprocess": preprocess, "variance_drift": vd

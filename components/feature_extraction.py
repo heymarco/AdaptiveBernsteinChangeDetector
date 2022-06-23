@@ -89,7 +89,7 @@ class PCAModel(DecoderEncoder):
         # n_components must be between 0 and min(n_samples, n_features) with svd_solver='full'
         max_components = min(window.shape)
         components = min(self.components, max_components)
-        self.pca = PCA(n_components=components)
+        self.pca = PCA(n_components=components, svd_solver="full")
         self.pca.fit(window)
 
     def new_tuple(self, x) -> Tuple[Any, Any, Any]:
