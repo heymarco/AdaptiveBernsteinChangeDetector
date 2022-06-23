@@ -88,6 +88,8 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         :return:
         """
         self.seen_elements += 1
+        if self.seen_elements % 1000 == 0:
+            print("Seen {} elements".format(self.seen_elements))
         if self.model is None:
             self.model = self.model_class(input_size=input_value.shape[-1], eta=self.eta)
         new_tuple = self.model.new_tuple(input_value)
