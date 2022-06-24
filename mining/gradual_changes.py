@@ -128,6 +128,9 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
     sort_by = ["Dims", "Dataset", "Approach", "Parameters"]
     result_df = result_df.sort_values(by=sort_by)
     result_df = result_df.apply(func=add_params_to_df, axis=1)
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (ae)"] = "ABCD (ae)"
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (pca)"] = "ABCD (pca)"
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (kpca)"] = "ABCD (kpca)"
     # result_df[result_df["Dataset"] == "Average"] = 0
     if print_summary:
         summary = summary.round(decimals={
@@ -136,9 +139,9 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
         summary = summary.sort_values(by=sort_by)
         summary.drop(["Parameters", "Dims", "MTPO [ms]", "F0.5", "F2"], axis=1, inplace=True)
         print(summary.set_index(["Dataset", "Approach"]).to_latex(escape=False))
-    abcd = np.logical_or(result_df["Approach"] == "ABCD0 (ae)",
-                          result_df["Approach"] == "ABCD0 (pca)")
-    abcd = np.logical_or(abcd, result_df["Approach"] == "ABCD0 (kpca)")
+    abcd = np.logical_or(result_df["Approach"] == "ABCD (ae)",
+                          result_df["Approach"] == "ABCD (pca)")
+    abcd = np.logical_or(abcd, result_df["Approach"] == "ABCD (kpca)")
     abcd = result_df[abcd]
     abcd[r"$E$"] = abcd["E"].astype(int)
     average = abcd.groupby(["Approach", "Parameters", "E", r"$\eta$"]).mean().reset_index()

@@ -159,7 +159,9 @@ if __name__ == '__main__':
     result_df = result_df.astype(dtype={"Dims": str})
     result_df["Pearson R"][result_df["Approach"] == "D3"] = result_df[result_df["Approach"] == "D3"]["Pearson R"]
     result_df = result_df[result_df["Dataset"] != "Average"]
-    result_df["Approach"][result_df["Approach"] == "ABCD0 (ae)"] = "ABCD"
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (ae)"] = "ABCD (ae)"
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (pca)"] = "ABCD (pca)"
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (kpca)"] = "ABCD (kpca)"
     result_df = result_df.sort_values(by="Approach")
     n_colors = len(np.unique(result_df["Approach"]))
     palette = sns.cubehelix_palette(n_colors=n_colors)
@@ -187,8 +189,8 @@ if __name__ == '__main__':
             ax.set_title(col_title)
         else:
             ax.set_title("")
-    plt.gcf().set_size_inches(3.5, 3.5 * 1.2)
+    plt.gcf().set_size_inches(3.5 * 2.5 / 2, 3.5 * 1.5)
     plt.tight_layout()
-    plt.subplots_adjust(left=0.16, wspace=0.15, right=0.99)
+    plt.subplots_adjust(left=0.12, wspace=0.1, right=0.99)
     plt.savefig(os.path.join("..", "figures", "evaluation_drift_region.pdf"))
     plt.show()

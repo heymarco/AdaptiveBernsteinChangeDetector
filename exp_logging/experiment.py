@@ -1,5 +1,6 @@
 import time
 from typing import Tuple
+import copy
 
 import numpy as np
 import pandas as pd
@@ -57,14 +58,16 @@ class Experiment:
             args_list = []
             for rep in range(self.reps):
                 data_config["seed"] = rep
+                alg = copy.deepcopy(detector)
                 stream = data_class(**data_config)
-                args_list.append([detector, stream, rep, warm_start])
+                args_list.append([alg, stream, rep, warm_start])
             dfs = run_async(self.evaluate_algorithm, args_list=args_list, njobs=njobs)
         else:
             dfs = []
             for rep in range(self.reps):
                 stream = data_class(**data_config)
-                dfs.append(self.evaluate_algorithm(detector, stream, rep=rep, warm_start=warm_start))
+                alg = copy.deepcopy(detector)
+                dfs.append(self.evaluate_algorithm(alg, stream, rep=rep, warm_start=warm_start))
         df = pd.concat(dfs, axis=0, ignore_index=True)
         if self.condense_results:
             empty_rep = df["rep"].isna() == False
