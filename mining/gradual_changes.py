@@ -9,12 +9,12 @@ import seaborn as sns
 
 from changeds.metrics import *
 from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, \
-    get_abcd_hyperparameters_from_str
+    get_abcd_hyperparameters_from_str, change_bar_width
 from E_gradual_changes import ename
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
-mpl.rcParams['text.latex.preamble'] = r'\usepackage{libertine}'
+mpl.rcParams['text.latex.preamble'] = r'\usepackage{times}'
 mpl.rcParams['text.latex.preamble'] = r'\usepackage{nicefrac}'
 mpl.rc('font', family='serif')
 
@@ -144,18 +144,25 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
     abcd = np.logical_or(abcd, result_df["Approach"] == "ABCD (kpca)")
     abcd = result_df[abcd]
     abcd[r"$E$"] = abcd["E"].astype(int)
-    average = abcd.groupby(["Approach", "Parameters", "E", r"$\eta$"]).mean().reset_index()
+    abcd["Approach"][abcd["Approach"] == "ABCD (ae)"] = "ae"
+    abcd["Approach"][abcd["Approach"] == "ABCD (kpca)"] = "kpca"
+    abcd["Approach"][abcd["Approach"] == "ABCD (pca)"] = "pca"
+    abcd = abcd.groupby(["Approach", "Parameters", "Dataset"]).mean().reset_index()
+    abcd_eta = abcd.copy()
+    average = abcd_eta.copy()  # .groupby(["Approach", r"$\eta$"]).mean().reset_index()
     average["Dataset"] = "Average"
-    abcd = pd.concat([abcd, average], axis=0)
+    abcd_eta = abcd.sort_values(by="Dims")
+    abcd_eta = pd.concat([average, abcd_eta], axis=0)
     abcd[r"$E$"] = abcd[r"$E$"].astype(int)
-    g = sns.catplot(hue=r"$E$", y="F1",
-                    x=r"$\eta$", col="Dataset", row="Approach", errwidth=1,
-                    data=abcd, kind="bar", palette=sns.cubehelix_palette(n_colors=3),
-                    height=1, aspect=1)
+    # palette = sns.color_palette("Dark2", n_colors=len(np.unique(result_df["Approach"])))
+    g = sns.catplot(x=r"$\eta$", y="F1", col="Dataset", hue="Approach", errwidth=1, col_wrap=4,
+                    data=abcd_eta, kind="bar", palette=sns.color_palette("Dark2"),
+                    height=1 * 8 / 6, aspect=.6 * 5 / 4)
     axes = plt.gcf().axes
     plt.gcf().subplots_adjust(left=0.08)
     for i, ax in enumerate(axes):
         # ax.set_ylim(0.4, 1.0)
+        # ax.set_ylim(bottom=.2)
         if i < 8:
             current_title = ax.get_title()
             dataset = current_title.split(" = ")[-1]
@@ -163,12 +170,46 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
         else:
             ax.set_title("")
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study.pdf"))
+    plt.tight_layout(pad=0.5)
+    plt.subplots_adjust(right=0.79)
+    plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-eta.pdf"))
+    plt.show()
+
+    abcd = abcd[abcd["Approach"] == "ae"]
+    abcd_E = abcd.copy()
+    average = abcd_E.copy() # '.groupby(["Approach", "Parameters", r"$E$"]).mean().reset_index()
+    average["Dataset"] = "Average"
+    abcd_E = abcd.sort_values(by="Dims")
+    abcd_E = pd.concat([average, abcd_E], axis=0)
+    ax = sns.barplot(x="Dataset", y="F1", hue="E", data=abcd_E, palette=sns.cubehelix_palette(n_colors=3), errwidth=1)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+    ax.set_xlabel("")
+    ax.set_ylim(bottom=.3)
+    ax.legend(title=r"$E$", loc='center left', bbox_to_anchor=(1, 0.5))
+    change_bar_width(ax, .23)
+    plt.gcf().set_size_inches((4.5, 1.8))
+    # g = sns.catplot(col=r"$E$", y="F1", x="Dataset", hue="Approach", errwidth=1,
+    #                 data=abcd, kind="bar", palette=sns.cubehelix_palette(n_colors=1),
+    #                 height=1.2, aspect=1, legend=False)
+    # axes = plt.gcf().axes
+    # plt.gcf().subplots_adjust(left=0.08)
+    # for i, ax in enumerate(axes):
+    #     # ax.set_ylim(0.4, 1.0)
+    #     if i < 8:
+    #         current_title = ax.get_title()
+    #         dataset = current_title.split(" = ")[-1]
+    #         ax.set_title(dataset)
+    #     else:
+    #         ax.set_title("")
+    #     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    plt.tight_layout()
+    plt.subplots_adjust(right=0.79)
+    plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-E.pdf"))
     plt.show()
 
     result_df = result_df.groupby(["Approach", "Parameters", "Dataset"]).mean().reset_index()
     mean = result_df.groupby(["Approach", "Parameters"]).mean().reset_index()
-    mean["Dataset"] = "AVG"
+    mean["Dataset"] = "Average"
     result_df = pd.concat([mean, result_df])
     result_df["MTD (thousands)"] = result_df["MTD"] / 1000
     value_vars = ["F1", "Prec.", "Rec.", "MTD (thousands)"]
@@ -176,7 +217,8 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
                         var_name="Metric", value_name="Value")
     melted_df = melted_df[melted_df["Value"].isna() == False]
     g = sns.catplot(data=melted_df, x="Approach", y="Value", col="Dataset", row="Metric", kind="box",
-                    linewidth=0.7, fliersize=2, sharey="row", palette=sns.cubehelix_palette(n_colors=9))
+                    linewidth=0.7, fliersize=2, sharey="row", palette=sns.color_palette("Dark2")
+                    )
     g.set(xlabel=None)
     for i, ax in enumerate(plt.gcf().axes):
         ax.set_xticks(ax.get_xticks())
