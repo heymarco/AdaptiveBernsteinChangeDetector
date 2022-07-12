@@ -12,6 +12,8 @@ If you encounter any problems during installation please have a look at the pack
 
 ## Related repositories
 
+Please add the following repositories to this project prior to executing any experiments:
+
 ### Data stream generators
 - https://github.com/heymarco/StreamGenerators
 - Add to this repository via `python -m pip install -e git+https://github.com/heymarco/StreamDatasets.git#egg=stream-datasets --upgrade`
@@ -20,3 +22,7 @@ If you encounter any problems during installation please have a look at the pack
 - https://github.com/heymarco/ChangeDetectors
 - Add to this repository via `python -m pip install -e git+https://github.com/heymarco/ChangeDetectors.git#egg=change-detectors --upgrade`
 
+## File structure
+
+- To recreate the experiments in the paper, run any of the files starting with `E_` (for experiments) 
+- To recreate the plots run any of the `mining/M_` files (for experiment mining). 
