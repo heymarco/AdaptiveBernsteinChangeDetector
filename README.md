@@ -4,7 +4,11 @@ This repository contains code for the paper "Adaptive Bernstein Change Detector 
 
 ## Installation of dependencies
 
+We have exported our conda environments into a `requirements.yml` file (used on our linux-server) and a `requirements-windows.yml` file (used on windows PCs). To recreate the environments, run 
+- `conda env create -f requirements.yml` or 
+- `conda env create -f requirements-windows.yml`.
 
+If you encounter any problems during installation please have a look at the packages listed in the file and install them manually.
 
 ## Related repositories
 
