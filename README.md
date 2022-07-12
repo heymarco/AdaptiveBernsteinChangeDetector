@@ -22,7 +22,7 @@ Please add the following repositories to this project prior to executing any exp
 - https://github.com/heymarco/ChangeDetectors
 - Add to this repository via `python -m pip install -e git+https://github.com/heymarco/ChangeDetectors.git#egg=change-detectors --upgrade`
 
-## File structure
+## Execution
 
 - `conda activate abcd`
 - To recreate the experiments in the paper, run any of the files starting with `E_` (for experiments)
