@@ -24,5 +24,7 @@ Please add the following repositories to this project prior to executing any exp
 
 ## File structure
 
-- To recreate the experiments in the paper, run any of the files starting with `E_` (for experiments) 
+- `conda activate abcd`
+- To recreate the experiments in the paper, run any of the files starting with `E_` (for experiments)
+  - The code will run in parallel by default on *all - 1* available cores. 
 - To recreate the plots run any of the `mining/M_` files (for experiment mining). 
