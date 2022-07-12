@@ -7,7 +7,7 @@ import pandas as pd
 import psutil
 
 from changeds import ChangeStream, RegionalChangeStream, GradualChangeStream, QuantifiesSeverity
-from detector import ABCD
+from abcd import ABCD
 from detectors import DriftDetector, RegionalDriftDetector
 
 from exp_logging.logger import ExperimentLogger

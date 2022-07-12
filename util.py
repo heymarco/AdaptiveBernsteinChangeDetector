@@ -110,7 +110,7 @@ def get_abcd_hyperparameters_from_str(string: str):
         try:
             if s == "True" or s == "False":
                 params.append(s == "True")
-            elif s in ["exp", "res", "all", "ed"]:
+            elif s in ["all", "ed"]:
                 params.append(s)
             else:
                 params.append(float(s))

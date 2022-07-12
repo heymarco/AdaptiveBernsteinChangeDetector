@@ -2,7 +2,7 @@ from sklearn.model_selection import ParameterGrid
 
 from changeds import RandomOrderHAR, LED, RBF, RandomOrderMNIST, RandomOrderFashionMNIST, RandomOrderCIFAR10, GasSensors
 
-from detector import ABCD
+from abcd import ABCD
 from detectors import WATCH, IBDD, D3, AdwinK
 
 from exp_logging.experiment import Experiment

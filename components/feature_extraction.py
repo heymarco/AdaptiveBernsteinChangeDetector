@@ -15,7 +15,7 @@ class DecoderEncoder(Protocol):
         """
         Update the model
         :param window: the data [n_samples, n_features]
-        :param epochs: the number of epochs
+        :param epochs: The number of training epochs
         :return: nothing
         """
 
@@ -51,7 +51,7 @@ class AutoEncoder(nn.Module, DecoderEncoder):
         """
         Update the autoencoder on the given window
         :param window: The data
-        :param epochs: The number of epochs
+        :param epochs: The number of training epochs
         :return:
         """
         if len(window) == 0:

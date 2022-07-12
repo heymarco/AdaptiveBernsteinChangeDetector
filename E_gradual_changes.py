@@ -3,7 +3,7 @@ from sklearn.model_selection import ParameterGrid
 from changeds import GradualLED, GradualRBF, GradualMNIST, GradualFashionMNIST, GradualCifar10, GradualGasSensors, \
     GradualHAR
 
-from detector import ABCD
+from abcd import ABCD
 from detectors import WATCH, IBDD, D3, AdwinK, IncrementalKS
 
 from exp_logging.experiment import Experiment
