@@ -21,8 +21,13 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
                  num_splits: int = 20):
         """
         :param delta: The desired confidence level
-        :param warm_start: The length of the warm start phase in which we train the AE without detecting changes
-        :param bound: The bounding method to use, either 'hoeffding', 'chernoff', or 'bernstein'
+        :param model_id: The name of the model to use
+        :param update_epochs: The number of epochs to train the AE after a change occurred
+        :param split_type: Investigation of different split types
+        :param subspace_threshold: Called tau in the paper
+        :param bonferroni: Use bonferroni correction to account for multiple testing?
+        :param encoding_factor: The relative size of the bottleneck
+        :param num_splits: The number of time point to evaluate
         """
         self.split_type = split_type
         self.delta = delta

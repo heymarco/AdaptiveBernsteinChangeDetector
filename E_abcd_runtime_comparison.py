@@ -40,7 +40,7 @@ if __name__ == '__main__':
     n_per_concept = 2000
     num_concepts = 1
     n_reps = 3
-    n_dims = [10, 100, 1000]
+    n_dims = [10, 100, 1000, 10000]
     datasets = {
         Gaussian: [{
             "num_concepts": num_concepts, "n_per_concept": n_per_concept,
