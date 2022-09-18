@@ -110,12 +110,32 @@ def get_abcd_hyperparameters_from_str(string: str):
         try:
             if s == "True" or s == "False":
                 params.append(s == "True")
-            elif s in ["exp", "res", "all", "ed"]:
+            elif s in ["all", "ed"]:
                 params.append(s)
             else:
                 params.append(float(s))
         except:
-            print("Could not parse input {} to float".format(s))
+            # print("Could not parse input {} to float".format(s))
+            params.append(np.nan)
+    return params
+
+
+def get_d3_hyperparameters_from_str(string: str):
+    # example param string: "$\delta = 0.05, E = 20, \eta = 0.3, bc = True$"
+    string = string.replace("$", "")
+    param_strings = string.split(sep=", ")
+    params = []
+    for s in param_strings:
+        s = s.split(" = ")[-1]
+        try:
+            if s == "True" or s == "False":
+                params.append(s == "True")
+            elif s in ["lr", "dt"]:
+                params.append(s)
+            else:
+                params.append(float(s))
+        except:
+            # print("Could not parse input {} to float".format(s))
             params.append(np.nan)
     return params
 
@@ -139,4 +159,16 @@ def cm2inch(*tupl):
         return tuple(i/inch for i in tupl[0])
     else:
         return tuple(i/inch for i in tupl)
+
+
+def change_bar_width(ax, new_value):
+    for patch in ax.patches:
+        current_width = patch.get_width()
+        diff = current_width - new_value
+
+        # we change the bar width
+        patch.set_width(new_value)
+
+        # we recenter the bar
+        patch.set_x(patch.get_x() + diff * .5)
 

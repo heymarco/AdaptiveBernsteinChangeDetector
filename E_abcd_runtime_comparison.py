@@ -15,7 +15,7 @@ from sklearn.model_selection import ParameterGrid
 
 from changeds import Gaussian
 
-from detector import ABCD
+from abcd import ABCD
 
 from exp_logging.experiment import Experiment
 from util import preprocess
@@ -35,7 +35,7 @@ if __name__ == '__main__':
                "bonferroni": [False],
                "split_type": ["ed"],
                "num_splits": [50],
-               "model_id": ["kpca", "pca", "ae"]},
+               "model_id": ["dummy"]},
     }
 
     algorithms = {

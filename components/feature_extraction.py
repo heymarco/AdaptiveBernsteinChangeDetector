@@ -10,12 +10,12 @@ from sklearn.decomposition import PCA, KernelPCA
 from exp_logging.logger import logger
 
 
-class DecoderEncoder(Protocol):
+class EncoderDecoder(Protocol):
     def update(self, window, epochs: int):
         """
         Update the model
         :param window: the data [n_samples, n_features]
-        :param epochs: the number of epochs
+        :param epochs: The number of training epochs
         :return: nothing
         """
 
@@ -26,8 +26,15 @@ class DecoderEncoder(Protocol):
         """
 
 
-class AutoEncoder(nn.Module, DecoderEncoder):
+class DummyEncoderDecoder(EncoderDecoder):
+    def update(self, window, epochs: int):
+        pass
 
+    def new_tuple(self, x) -> Tuple[Any, Any, Any]:
+        return 0.0, x, x
+
+
+class AutoEncoder(nn.Module, EncoderDecoder):
     def __init__(self, input_size: int, eta: float):
         """
         A simple single layer autoencoder
@@ -51,7 +58,7 @@ class AutoEncoder(nn.Module, DecoderEncoder):
         """
         Update the autoencoder on the given window
         :param window: The data
-        :param epochs: The number of epochs
+        :param epochs: The number of training epochs
         :return:
         """
         if len(window) == 0:
@@ -79,7 +86,7 @@ class AutoEncoder(nn.Module, DecoderEncoder):
             return loss.item(), pred.numpy()[0], x[0]
 
 
-class PCAModel(DecoderEncoder):
+class PCAModel(EncoderDecoder):
     def __init__(self, input_size: int, eta: float):
         self.input_size = input_size
         self.eta = eta
@@ -101,7 +108,7 @@ class PCAModel(DecoderEncoder):
         return mse, dec.flatten(), x.flatten()
 
 
-class KernelPCAModel(DecoderEncoder):
+class KernelPCAModel(EncoderDecoder):
     def __init__(self, input_size: int, eta: float, kernel="rbf"):
         self.input_size = input_size
         self.eta = eta

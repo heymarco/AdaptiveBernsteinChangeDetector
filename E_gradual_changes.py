@@ -3,8 +3,8 @@ from sklearn.model_selection import ParameterGrid
 from changeds import GradualLED, GradualRBF, GradualMNIST, GradualFashionMNIST, GradualCifar10, GradualGasSensors, \
     GradualHAR
 
-from detector import ABCD
-from detectors import WATCH, IBDD, D3, AdwinK, IncrementalKS
+from abcd import ABCD
+from detectors import WATCH, IBDD, D3, AdwinK, IncrementalKS, BayesianOnlineDetector
 
 from exp_logging.experiment import Experiment
 from util import preprocess
@@ -24,7 +24,8 @@ if __name__ == '__main__':
         #        "split_type": ["ed"],
         #        "num_splits": [20],
         #        "model_id": ["kpca", "pca"]},
-        IncrementalKS: {"w": [100, 200, 500], "delta": [0.01, 0.05]}
+        # IncrementalKS: {"w": [100, 200, 500], "delta": [0.01, 0.05]},
+        # BayesianOnlineDetector: {"threshold": [0.2, 0.05, 0.01], "time_scale": [100, 200, 300]}
     }
 
     algorithms = {
@@ -57,4 +58,4 @@ if __name__ == '__main__':
 
     experiment = Experiment(name=ename, configurations=algorithms, datasets=datasets,
                             reps=n_reps, condense_results=False, algorithm_timeout=10 * 60)
-    experiment.run(warm_start=100, parallel=True)
+    experiment.run(warm_start=100, parallel=False)

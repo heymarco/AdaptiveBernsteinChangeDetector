@@ -4,7 +4,7 @@ from changeds import QuantifiesSeverity
 from detectors import RegionalDriftDetector
 from scipy.stats import zscore
 
-from components.feature_extraction import AutoEncoder, DecoderEncoder, PCAModel, KernelPCAModel
+from components.feature_extraction import AutoEncoder, EncoderDecoder, PCAModel, KernelPCAModel, DummyEncoderDecoder
 from components.windowing import AdaptiveWindow, p_bernstein
 from exp_logging.logger import ExperimentLogger
 
@@ -13,34 +13,33 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
     def __init__(self,
                  delta: float,
                  model_id: str = "ae",
-                 bound: str = "bernstein",
                  update_epochs: int = 20,
                  split_type: str = "ed",
-                 new_ae: bool = True,
-                 subspace_threshold: float = 2.5,
+                 subspace_threshold: float = 2.1,
                  bonferroni: bool = False,
                  encoding_factor: float = 0.7,
-                 num_splits: int = 50,
-                 reservoir_size: int = 10):
+                 num_splits: int = 20):
         """
         :param delta: The desired confidence level
-        :param warm_start: The length of the warm start phase in which we train the AE without detecting changes
-        :param bound: The bounding method to use, either 'hoeffding', 'chernoff', or 'bernstein'
+        :param model_id: The name of the model to use
+        :param update_epochs: The number of epochs to train the AE after a change occurred
+        :param split_type: Investigation of different split types
+        :param subspace_threshold: Called tau in the paper
+        :param bonferroni: Use bonferroni correction to account for multiple testing?
+        :param encoding_factor: The relative size of the bottleneck
+        :param num_splits: The number of time point to evaluate
         """
         self.split_type = split_type
         self.delta = delta
-        self.new_ae = new_ae
         self.bonferroni = bonferroni
         self.num_splits = num_splits
         self.subspace_threshold = subspace_threshold
-        self.reservoir_size = reservoir_size
-        self.window = AdaptiveWindow(delta=delta, bound=bound, split_type=split_type,
-                                     bonferroni=bonferroni, reservoir_size=reservoir_size, n_splits=num_splits)
-        self.model: DecoderEncoder = None
+        self.window = AdaptiveWindow(delta=delta, split_type=split_type,
+                                     bonferroni=bonferroni, n_splits=num_splits)
+        self.model: EncoderDecoder = None
         self.last_change_point = None
         self.last_detection_point = None
         self.seen_elements = 0
-        self.bound = bound
         self.last_training_point = None
         self._last_loss = np.nan
         self.drift_dimensions = None
@@ -55,6 +54,8 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
             self.model_class = KernelPCAModel
         elif model_id == "ae":
             self.model_class = AutoEncoder
+        elif model_id == "dummy":
+            self.model_class = DummyEncoderDecoder
         else:
             raise ValueError
         super(ABCD, self).__init__()
@@ -64,13 +65,13 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         return this_name + " ({})".format(self.model_id)
 
     def parameter_str(self) -> str:
-        return r"$\delta = {}, E = {}, \eta = {}, bc = {}$, st = {}, rs = {}, st = {}, n-splits = {}".format(self.delta, self.epochs,
-                                                                                                self.eta,
-                                                                                                self.bonferroni,
-                                                                                                self.split_type,
-                                                                                                self.reservoir_size,
-                                                                                                self.subspace_threshold,
-                                                                                                             self.num_splits)
+        return r"$\delta = {}, E = {}, \eta = {}, bc = {}$, st = {}, st = {}, n-splits = {}".format(self.delta,
+                                                                                                    self.epochs,
+                                                                                                    self.eta,
+                                                                                                    self.bonferroni,
+                                                                                                    self.split_type,
+                                                                                                    self.subspace_threshold,
+                                                                                                    self.num_splits)
 
     def set_logger(self, l: ExperimentLogger):
         self.logger = l
@@ -88,8 +89,6 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         :return:
         """
         self.seen_elements += 1
-        if self.seen_elements % 1000 == 0:
-            print("Seen {} elements".format(self.seen_elements))
         if self.model is None:
             self.model = self.model_class(input_size=input_value.shape[-1], eta=self.eta)
         new_tuple = self.model.new_tuple(input_value)
@@ -98,24 +97,35 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.in_concept_change, detection_point = self.window.has_change()
         self.logger.track_change_point(self.in_concept_change)
         if self.in_concept_change:
-            self._find_drift_dimensions()
+            self._evaluate_subspace()
             self._evaluate_magnitude()
 
-            # LOGGING
+            # EXPERIMENT LOGGING
             self.last_detection_point = detection_point
             self.delay = len(self.window) - self.window.t_star
             self.last_change_point = self.last_detection_point - self.delay
             self.logger.track_delay(self.delay)
 
-            if self.new_ae:
-                self.model = self.model_class(input_size=input_value.shape[-1], eta=self.eta)
-            self.pre_train(self.window.data_new())  # update autoencoder after change
+            self.model = None  # Remove outdated model
+            self.pre_train(self.window.data_new())  # New model after change
             self.window.reset()  # forget outdated data
 
     def metric(self):
         return self._last_loss
 
-    def _find_drift_dimensions(self):
+    def get_dims_p_values(self) -> np.ndarray:
+        return self.drift_dimensions
+
+    def get_drift_dims(self) -> np.ndarray:
+        drift_dims = np.array([
+            i for i in range(len(self.drift_dimensions)) if self.drift_dimensions[i] < self.subspace_threshold
+        ])
+        return np.arange(len(self.drift_dimensions)) if len(drift_dims) == 0 else drift_dims
+
+    def get_severity(self):
+        return self._severity
+
+    def _evaluate_subspace(self):
         data = self.window.data()
         output = self.window.reconstructions()
         error = output - data
@@ -131,18 +141,6 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         n2 = len(window2)
         p = p_bernstein(eps, n1=n1, n2=n2, sigma1=sigma1, sigma2=sigma2)
         self.drift_dimensions = p
-
-    def get_dims_p_values(self) -> np.ndarray:
-        return self.drift_dimensions
-
-    def get_drift_dims(self) -> np.ndarray:
-        drift_dims = np.array([
-            i for i in range(len(self.drift_dimensions)) if self.drift_dimensions[i] < self.subspace_threshold
-        ])
-        return np.arange(len(self.drift_dimensions)) if len(drift_dims) == 0 else drift_dims
-
-    def get_severity(self):
-        return self._severity
 
     def _evaluate_magnitude(self):
         drift_point = self.window.t_star

@@ -44,11 +44,18 @@ def p_bernstein(eps, n1, n2, sigma1, sigma2, abs_max: float = 0.1):
 
 
 class AdaptiveWindow:
-    def __init__(self, delta: float, bound: str, max_size: int = np.infty,
-                 split_type: str = "all", bonferroni: bool = True, reservoir_size: int = 200, n_splits: int = 50):
+    def __init__(self, delta: float,
+                 max_size: int = np.infty,
+                 split_type: str = "ed",
+                 bonferroni: bool = False,
+                 n_splits: int = 20):
         """
-        :param delta: The error rate
-        :param bound: The bound, 'hoeffding', 'chernoff', or 'bernstein'
+        The data structure containing the aggregates
+        :param delta: The allowed rate of false alarms
+        :param max_size: The maximum size of the window
+        :param split_type: equidistant (ed) or every possible points (all)
+        :param bonferroni: Flag if Bonferroni correction should be used
+        :param n_splits: Number of evaluated time points
         """
         self.w = []
         self.delta = delta
@@ -56,7 +63,6 @@ class AdaptiveWindow:
         self.t_star = 0
         self.n_seen_items = 0
         self._best_split_candidate = 0
-        self.bound = bound
         self.min_p_value = 1.0
         self._argmin_p_value = 0
         self.n_splits = n_splits
@@ -65,7 +71,6 @@ class AdaptiveWindow:
         self.split_type = split_type
         self.min_window_size = 60
         self.logger = None
-        self.reservoir_size = reservoir_size
         self._cut_indices = []
 
     def __len__(self):
@@ -164,26 +169,10 @@ class AdaptiveWindow:
                 dist = int(interval / n_points)
                 cut_indices = np.arange(k_min, k_max + 1, dist)[-n_points:]
                 self._cut_indices = cut_indices
-        elif self.split_type == "exp":
-            n_points = int(np.log(k_max - k_min)) + 1
-            indices = [k_max - 2 ** i + 1 for i in range(n_points)]
-            # Always include the current best guess about the change point
-            if self._argmin_p_value:
-                best_cut_index = self._cut_index(self._argmin_p_value)
-                indices = np.append(indices, values=best_cut_index)
-            self._cut_indices = np.sort(indices)
-        elif self.split_type == "res":
-            n_possible_splits = k_max - k_min
-            if n_possible_splits <= self.reservoir_size:
-                self._cut_indices = list(range(k_min, k_max, 1))
-            else:
-                prob_of_updating = self.reservoir_size / n_possible_splits
-                if np.random.uniform() < prob_of_updating:
-                    remove_index = np.random.randint(0, high=self.reservoir_size)
-                    self._cut_indices.pop(remove_index)
-                    self._cut_indices.append(k_max - 1)
-        else:
+        elif self.split_type == "all":
             self._cut_indices = list(range(k_min, k_max, 1))
+        else:
+            raise ValueError
 
     def _cut_index(self, offset=0):
         index_out_of_bounds = self._argmin_p_value + offset < 0

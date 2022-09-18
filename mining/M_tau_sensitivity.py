@@ -14,9 +14,9 @@ from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
-mpl.rcParams['text.latex.preamble'] = r'\usepackage{helvet}'
+mpl.rcParams['text.latex.preamble'] = r'\usepackage{times}'
 mpl.rcParams['text.latex.preamble'] = r'\usepackage{nicefrac}'
-# mpl.rc('font', family='serif')
+mpl.rc('font', family='serif')
 
 
 if __name__ == '__main__':
@@ -62,7 +62,7 @@ if __name__ == '__main__':
                                                           "approach", "has changed", "p-value"])
         result_df.to_csv(os.path.join(cache_dir, "cached-p-values.csv"), index=False)
 
-    steps = 10
+    steps = 40
     max_thresh = 4
     evaluated_thresholds = max_thresh - max_thresh * np.arange(steps + 1) / steps
     result = []
@@ -79,9 +79,6 @@ if __name__ == '__main__':
             intersect = np.intersect1d(gt_indices, found_indices)
             union = np.union1d(found_indices, gt_indices)
             jaccard = len(intersect) / len(union)
-            prec = 0
-            rec = 0
-            f1 = 0
             tp = np.sum(np.logical_and(subspaces, gt))
             fp = np.sum(np.logical_and(subspaces, np.invert(gt)))
             fn = np.sum(np.logical_and(np.invert(subspaces), gt))
@@ -89,28 +86,33 @@ if __name__ == '__main__':
             rec = tp / (tp + fn)
             f1 = 2 * prec * rec / (prec + rec)
             result.append(list(keys) + [jaccard, prec, rec, f1, thresh])
-    result = pd.DataFrame(result, columns=groupby + ["Jaccard", "Prec.", "Rec.", "F1", r"$\delta_j$"])
-    avg_df = result.groupby(r"$\delta_j$").mean().reset_index()
+    result = pd.DataFrame(result, columns=groupby + ["Jaccard", "Prec.", "Rec.", "F1", r"$\tau$"])
+    avg_df = result.copy().groupby([r"$\tau$", "approach"]).mean().reset_index()
     avg_df["dataset"] = "Avg."
     result = pd.concat([result, avg_df]).reset_index()
     result = result.sort_values(by=["dataset"], ascending=False)
     n_colors = len(np.unique(result["dataset"]))
     sns.set_palette(sns.cubehelix_palette())
-    result = result.melt(id_vars=["dataset", "approach", "params", "rep", r"$\delta_j$"],
-                         value_vars=["Jaccard", "Prec.", "Rec.", "F1"],
-                         var_name="Metric", value_name="Score")
-    result = result[result["Metric"] != "Jaccard"].sort_values(by="Metric").sort_values(by="dataset")
-    g = sns.relplot(data=result, x=r"$\delta_j$", y="Score", hue="dataset", col="Metric", kind="line", legend=False)
-    plt.gcf().set_size_inches((3.5, 2))
+    # result = result.melt(id_vars=["dataset", "approach", "params", "rep", r"$\tau$"],
+    #                      value_vars=["Jaccard", "Prec.", "Rec.", "F1"],
+    #                      var_name="Metric", value_name="Score")
+    # result = result[result["Metric"] != "Jaccard"].sort_values(by="Metric").sort_values(by="dataset", ascending=False)
+    result = result.sort_values(by="approach").sort_values(by="dataset", ascending=False)
+    g = sns.relplot(data=result, x=r"$\tau$", y="Jaccard", hue="dataset", col="approach",
+                    kind="line", legend=False, ci=False)
+    plt.gcf().set_size_inches((3.8, 2))
     lines = g.figure.axes[-1].get_lines()
-    labels = np.sort(np.unique(result["dataset"]))[::-1]
+    labels = np.unique(result["dataset"])
+    labels = pd.Series(labels).sort_values(ascending=False)
+    # titles = ["F1", "Rec.", "Prec."]
     plt.figlegend(lines, labels, loc='lower center', frameon=False, ncol=3, title=None)
     for i, ax in enumerate(g.figure.axes):
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         col_title = ax.get_title().split(" = ")[-1]
+        col_title = col_title.split("0")[0] + col_title.split("0")[1]
         ax.set_title(col_title)
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.47)
-    plt.savefig(os.path.join(os.getcwd(), "..", "figures", "delta_j_sensitivity.pdf"))
+    plt.savefig(os.path.join(os.getcwd(), "..", "figures", "tau_sensitivity.pdf"))
     plt.show()
 
