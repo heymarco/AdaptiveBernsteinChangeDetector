@@ -23,8 +23,8 @@ ename = "abcd_runtime_comparison"
 
 if __name__ == '__main__':
     parameter_choices = {
-        AdwinK: {"k": [0.1, 0.2, 0.3], "delta": [0.05]},
         WATCH: {"kappa": [100], "mu": [1000, 2000], "epsilon": [2, 3], "omega": [500, 1000]},
+        AdwinK: {"k": [0.1, 0.2, 0.3], "delta": [0.05]},
         IBDD: {"w": [100, 200, 300], "m": [10, 20, 50, 100]},  # already tuned manually... other values work very bad.
         D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9]},
         ABCD: {"encoding_factor": [0.5], "delta": [1e-10], "update_epochs": [50],
@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     n_per_concept = 2000
     num_concepts = 1
-    n_reps = 3
+    n_reps = 1
     n_dims = [10, 100, 1000, 10000]
     datasets = {
         Gaussian: [{

@@ -4,7 +4,7 @@ from changeds import QuantifiesSeverity
 from detectors import RegionalDriftDetector
 from scipy.stats import zscore
 
-from components.feature_extraction import AutoEncoder, DecoderEncoder, PCAModel, KernelPCAModel
+from components.feature_extraction import AutoEncoder, EncoderDecoder, PCAModel, KernelPCAModel, DummyEncoderDecoder
 from components.windowing import AdaptiveWindow, p_bernstein
 from exp_logging.logger import ExperimentLogger
 
@@ -36,7 +36,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.subspace_threshold = subspace_threshold
         self.window = AdaptiveWindow(delta=delta, split_type=split_type,
                                      bonferroni=bonferroni, n_splits=num_splits)
-        self.model: DecoderEncoder = None
+        self.model: EncoderDecoder = None
         self.last_change_point = None
         self.last_detection_point = None
         self.seen_elements = 0
@@ -54,6 +54,8 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
             self.model_class = KernelPCAModel
         elif model_id == "ae":
             self.model_class = AutoEncoder
+        elif model_id == "dummy":
+            self.model_class = DummyEncoderDecoder
         else:
             raise ValueError
         super(ABCD, self).__init__()

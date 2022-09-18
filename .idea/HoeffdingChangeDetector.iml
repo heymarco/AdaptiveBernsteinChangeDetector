@@ -4,7 +4,6 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/src/stream-datasets" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/mining/src/change-detectors" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/change-detectors" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.8 (HoeffdingChangeDetector)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

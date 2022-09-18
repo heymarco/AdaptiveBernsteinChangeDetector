@@ -115,7 +115,27 @@ def get_abcd_hyperparameters_from_str(string: str):
             else:
                 params.append(float(s))
         except:
-            print("Could not parse input {} to float".format(s))
+            # print("Could not parse input {} to float".format(s))
+            params.append(np.nan)
+    return params
+
+
+def get_d3_hyperparameters_from_str(string: str):
+    # example param string: "$\delta = 0.05, E = 20, \eta = 0.3, bc = True$"
+    string = string.replace("$", "")
+    param_strings = string.split(sep=", ")
+    params = []
+    for s in param_strings:
+        s = s.split(" = ")[-1]
+        try:
+            if s == "True" or s == "False":
+                params.append(s == "True")
+            elif s in ["lr", "dt"]:
+                params.append(s)
+            else:
+                params.append(float(s))
+        except:
+            # print("Could not parse input {} to float".format(s))
             params.append(np.nan)
     return params
 
