@@ -36,7 +36,7 @@ if __name__ == '__main__':
     drift_length = 300
     dims = 100
     stretch = True
-    n_reps = 1
+    n_reps = 30
     datasets = {
         GradualHAR: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
                       "preprocess": preprocess}],

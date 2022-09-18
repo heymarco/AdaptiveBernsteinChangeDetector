@@ -127,8 +127,8 @@ class AdaptiveWindow:
         if len(self.variance_tracker) <= self.min_window_size:
             return False, None
         aggregates = [self.variance_tracker.pairwise_aggregate(i) for i in self._cut_indices]
-        sigma = np.array([aggregate.std() for aggregate in aggregates])
-        pairwise_means = [aggregate.mean() for aggregate in aggregates]
+        info = np.array([[aggregate.mean(), aggregate.std(), aggregate.n()] for aggregate in aggregates])
+        pairwise_means, sigma, pairwise_n = info[:, 0], info[:, 1], info[:, 2]
         pairwise_n = np.array([aggregate.n() for aggregate in aggregates])
         epsilon = np.array([np.abs(m2 - m1) for (m1, m2) in pairwise_means])
         delta_empirical = p_bernstein(eps=epsilon,
