@@ -4,7 +4,7 @@ from changeds import GradualLED, GradualRBF, GradualMNIST, GradualFashionMNIST, 
     GradualHAR
 
 from abcd import ABCD
-from components.abcd_adaptions import AdaptiveKS, AdaptiveWATCH, AdaptiveAdwinK, AdaptiveD3
+from components.abcd_window_adaptions import SlidingWindowDetector, FixedReferenceWindowDetector
 
 from exp_logging.experiment import Experiment
 from util import preprocess
@@ -13,18 +13,29 @@ ename = "abcd_model_ablation"
 
 if __name__ == '__main__':
     parameter_choices = {
-        ABCD: {"encoding_factor": [0.5, 0.3, 0.7],
+        FixedReferenceWindowDetector: {
+            "model_id": ["ae", "pca", "kpca"],
+            "delta": [0.05],
+            "update_epochs": [50],
+            "eta": [0.5],
+            "min_window_size": [100],
+            "max_window_size": [1000, 2000],
+            "batch_size": [500, 1000]
+        },
+        SlidingWindowDetector: {
+            "model_id": ["ae", "pca", "kpca"],
+            "delta": [0.05],
+            "update_epochs": [50],
+            "eta": [0.5],
+            "window_size": [100, 200, 500]
+        },
+        ABCD: {"encoding_factor": [0.5],
                "delta": [0.05],
-               "update_epochs": [20, 50, 100],
+               "update_epochs": [50],
                "bonferroni": [False],
                "split_type": ["ed"],
                "num_splits": [20],
-               "model_id": ["ae"]},
-        AdaptiveWATCH: {"threshold": [0.01 + i / 200 for i in range(10)]},
-        AdaptiveD3: {"threshold": [0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90],
-                     "model_id": ["lr", "dt"], "w_min": [100, 250, 500]},
-        AdaptiveAdwinK: {"threshold": [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5], "delta": [0.05]},
-        AdaptiveKS: {"threshold": [0.05]},
+               "model_id": ["ae", "pca", "kpca"]},
     }
 
     algorithms = {

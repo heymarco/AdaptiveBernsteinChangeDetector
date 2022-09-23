@@ -269,5 +269,5 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
 
 
 if __name__ == '__main__':
-    compare(print_summary=False,
+    compare(print_summary=True,
             plot_gradual_changes_comparison=True)
