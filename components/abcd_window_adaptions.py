@@ -86,7 +86,6 @@ class WindowAblation(RegionalDriftDetector, QuantifiesSeverity):
             self._evaluate_subspace()
             self._evaluate_magnitude()
             self.last_change_point = self.last_detection_point - self.delay
-            print("Detect change at index {}".format(self.last_detection_point))
             self.model = None  # Remove outdated model
             self.pre_train(np.array([w[-1] for w in self.w2]))  # New model after change
             self.w1 = deque()
