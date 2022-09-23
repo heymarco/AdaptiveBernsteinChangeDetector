@@ -13,7 +13,7 @@ ename = "abcd_model_ablation"
 
 if __name__ == '__main__':
     parameter_choices = {
-        AdaptiveWATCH: {"threshold": [0.013 + i / 1000 for i in range(10)]},
+        AdaptiveWATCH: {"threshold": [0.01 + i / 200 for i in range(10)]},
         AdaptiveD3: {"threshold": [0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90],
                      "model_id": ["lr", "dt"], "w_min": [100, 250, 500]},
         AdaptiveAdwinK: {"threshold": [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5], "delta": [0.05]},

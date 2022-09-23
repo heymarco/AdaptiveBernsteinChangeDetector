@@ -70,7 +70,6 @@ class AbstractABCDAdaption(DriftDetector):
         ]
         max_score = np.max(scores)
         self.change_score = max_score
-        print(max_score)
         if max_score > self.threshold:
             window_index = np.argmax(scores)
             self.last_detection_point = self.seen_elements
