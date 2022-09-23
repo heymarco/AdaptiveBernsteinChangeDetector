@@ -13,6 +13,13 @@ ename = "abcd_model_ablation"
 
 if __name__ == '__main__':
     parameter_choices = {
+        ABCD: {"encoding_factor": [0.5, 0.3, 0.7],
+               "delta": [0.05],
+               "update_epochs": [20, 50, 100],
+               "bonferroni": [False],
+               "split_type": ["ed"],
+               "num_splits": [20],
+               "model_id": ["ae"]},
         AdaptiveWATCH: {"threshold": [0.01 + i / 200 for i in range(10)]},
         AdaptiveD3: {"threshold": [0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90],
                      "model_id": ["lr", "dt"], "w_min": [100, 250, 500]},
