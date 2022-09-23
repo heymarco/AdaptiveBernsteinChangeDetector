@@ -7,9 +7,9 @@ from tqdm import tqdm
 from util import new_dir_for_experiment_with_name
 
 if __name__ == '__main__':
-    ename = "synthetic_data"
-    approaches = ["ABCD0 (ae)", "ABCD0 (pca)", "ABCD0 (kpca)", "D3", "IKS", "AdwinK", "IBDD", "WATCH"]
-    datasets = ["HSphere"]
+    ename = "abcd_runtime_comparison"
+    approaches = ["D3", "IKS", "AdwinK", "IBDD", "WATCH", "ABCD0 (dummy)"]
+    datasets = False
     folder_nr = 28
     from_dir = os.path.join(os.getcwd(), "results", "experiments", ename, str(folder_nr))
     to_dir = new_dir_for_experiment_with_name(ename)
