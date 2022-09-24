@@ -4,7 +4,7 @@ from changeds import GradualLED, GradualRBF, GradualMNIST, GradualFashionMNIST, 
     GradualHAR
 
 from abcd import ABCD
-from components.abcd_window_adaptions import SlidingWindowDetector, FixedReferenceWindowDetector
+from components.abcd_window_adaptions import SlidingWindowDetector, FixedReferenceWindowDetector, JumpingWindowDetector
 
 from exp_logging.experiment import Experiment
 from util import preprocess
@@ -13,15 +13,23 @@ ename = "abcd_model_ablation"
 
 if __name__ == '__main__':
     parameter_choices = {
-        FixedReferenceWindowDetector: {
+        JumpingWindowDetector: {
             "model_id": ["ae", "pca", "kpca"],
             "delta": [0.05],
             "update_epochs": [50],
             "eta": [0.5],
-            "min_window_size": [100],
-            "max_window_size": [1000, 2000],
-            "batch_size": [500, 1000]
+            "window_size": [100, 250, 500, 1000],
+            "rho": [0.1, 0.2, 0.3, 0.4, 0.5]
         },
+        # FixedReferenceWindowDetector: {
+        #     "model_id": ["ae", "pca", "kpca"],
+        #     "delta": [0.05],
+        #     "update_epochs": [50],
+        #     "eta": [0.5],
+        #     "min_window_size": [100],
+        #     "max_window_size": [1000, 2000],
+        #     "batch_size": [500, 1000]
+        # },
         SlidingWindowDetector: {
             "model_id": ["ae", "pca", "kpca"],
             "delta": [0.05],
@@ -29,13 +37,13 @@ if __name__ == '__main__':
             "eta": [0.5],
             "window_size": [100, 200, 500]
         },
-        ABCD: {"encoding_factor": [0.5],
-               "delta": [0.05],
-               "update_epochs": [50],
-               "bonferroni": [False],
-               "split_type": ["ed"],
-               "num_splits": [20],
-               "model_id": ["ae", "pca", "kpca"]},
+        # ABCD: {"encoding_factor": [0.5],
+        #        "delta": [0.05],
+        #        "update_epochs": [50],
+        #        "bonferroni": [False],
+        #        "split_type": ["ed"],
+        #        "num_splits": [20],
+        #        "model_id": ["ae", "pca", "kpca"]},
     }
 
     algorithms = {
@@ -47,7 +55,7 @@ if __name__ == '__main__':
     drift_length = 300
     dims = 100
     stretch = True
-    n_reps = 1
+    n_reps = 30
     datasets = {
         GradualHAR: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
                       "preprocess": preprocess}],
@@ -68,4 +76,4 @@ if __name__ == '__main__':
 
     experiment = Experiment(name=ename, configurations=algorithms, datasets=datasets,
                             reps=n_reps, condense_results=True, algorithm_timeout=10 * 60)
-    experiment.run(warm_start=100, parallel=False)
+    experiment.run(warm_start=100, parallel=True)

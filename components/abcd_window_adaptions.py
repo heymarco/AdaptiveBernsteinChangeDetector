@@ -196,7 +196,7 @@ class FixedReferenceWindowDetector(WindowAblation):
         self.delay = batch_size
 
     def name(self):
-        this_name = "RW"
+        this_name = "FRW"
         return this_name + " ({})".format(self.model_id)
 
     def parameter_str(self) -> str:
@@ -222,3 +222,124 @@ class FixedReferenceWindowDetector(WindowAblation):
 
     def are_windows_large_enough(self) -> bool:
         return len(self.w2) == self.batch_size
+
+
+class FixedReferenceWindowDetector(WindowAblation):
+    def __init__(self,
+                 model_id: str,
+                 delta: float = 0.05,
+                 eta: float = 0.5,
+                 update_epochs: int = 50,
+                 tau: float = 2.5,
+                 min_window_size: int = 100,
+                 max_window_size: int = 100,
+                 batch_size: int = 100):
+        super(FixedReferenceWindowDetector, self).__init__(model_id, delta, eta, update_epochs, tau)
+        self.min_window_size = min_window_size
+        self.max_window_size = max_window_size
+        self.batch_size = batch_size
+        self.delay = batch_size
+
+    def name(self):
+        this_name = "FRW"
+        return this_name + " ({})".format(self.model_id)
+
+    def parameter_str(self) -> str:
+        return r"$\delta = {}, E = {}, \eta = {}, minws = {}, maxws = {}, bs = {}$".format(self.delta,
+                                                                                           self.epochs,
+                                                                                           self.eta,
+                                                                                           self.min_window_size,
+                                                                                           self.max_window_size,
+                                                                                           self.batch_size)
+
+    def update_windows(self, new_value):
+        if len(self.w1) < self.min_window_size:
+            self.w1.append(new_value)
+            return
+        if len(self.w2) < self.batch_size:
+            self.w2.append(new_value)
+            return
+        if len(self.w2) == self.batch_size and len(self.w1) < self.max_window_size:
+            self.w1 += self.w2
+            self.w2 = deque()
+            while len(self.w1) > self.max_window_size:
+                self.w1.pop()  # pop item from *right* side of window
+
+    def are_windows_large_enough(self) -> bool:
+        return len(self.w2) == self.batch_size
+
+
+class JumpingWindowDetector(WindowAblation):
+    def __init__(self,
+                 model_id: str,
+                 delta: float = 0.05,
+                 eta: float = 0.5,
+                 update_epochs: int = 50,
+                 tau: float = 2.5,
+                 window_size: int = 100,
+                 rho: int = 50):
+        super(JumpingWindowDetector, self).__init__(model_id, delta, eta, update_epochs, tau)
+        self.window_size = window_size
+        self.rho = rho
+        self.delay = window_size
+
+    def name(self) -> str:
+        this_name = "JW"
+        return this_name + " ({})".format(self.model_id)
+
+    def parameter_str(self) -> str:
+        return r"$\delta = {}, E = {}, \eta = {}, ws = {}$".format(self.delta,
+                                                                   self.epochs,
+                                                                   self.eta,
+                                                                   self.window_size)
+
+    def update_windows(self, new_value):
+        self.w2.append(new_value)
+        if len(self.w2) > int(self.window_size * self.rho):
+            popped = self.w2.popleft()
+            self.w1.append(popped)
+            if len(self.w1) > self.window_size:
+                self.w1.popleft()
+
+    def drop_elements(self):
+        n_dropped_elements = int(self.rho * self.window_size)
+        [self.w1.popleft() for _ in range(n_dropped_elements)]
+        self.w1 += self.w2
+        self.w2 = deque()
+
+    def are_windows_large_enough(self) -> bool:
+        return len(self.w1) == self.window_size and len(self.w2) == int(self.rho * self.window_size)
+
+    def add_element(self, input_value):
+        """
+        Add the new element and also perform change detection
+        :param input_value: The new observation
+        :return:
+        """
+        self.seen_elements += 1
+        self.in_concept_change = False
+        if self.model is None:
+            self.model = self.model_class(input_size=input_value.shape[-1], eta=self.eta)
+
+        # update window
+        new_tuple = self.model.new_tuple(input_value)
+        self._last_loss = new_tuple[0]
+        self.update_windows(new_tuple)
+        if not self.are_windows_large_enough():
+            return
+        # perform change detection
+        w1_loss = np.array([tpl[0] for tpl in self.w1])
+        w2_loss = np.array([tpl[0] for tpl in self.w2])
+        p = self.bernstein_score(w1_loss, w2_loss)
+        self.in_concept_change = p < self.delta
+        if self.in_concept_change:
+            self.last_detection_point = self.seen_elements - len(self.w2)
+            self._evaluate_subspace()
+            self._evaluate_magnitude()
+            self.last_change_point = self.last_detection_point - self.delay
+            self.model = None  # Remove outdated model
+            self.pre_train(np.array([w[-1] for w in self.w2]))  # New model after change
+            self.w1 = self.w2
+            self.w2 = deque()
+        else:
+            self.drop_elements()
