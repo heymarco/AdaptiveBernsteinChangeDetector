@@ -13,15 +13,15 @@ ename = "abcd_model_ablation"
 
 if __name__ == '__main__':
     parameter_choices = {
-        FixedReferenceWindowDetector: {
-            "model_id": ["ae", "pca", "kpca"],
-            "delta": [0.05],
-            "update_epochs": [50],
-            "eta": [0.5],
-            "min_window_size": [100],
-            "max_window_size": [1000, 2000],
-            "batch_size": [500, 1000]
-        },
+        # FixedReferenceWindowDetector: {
+        #     "model_id": ["ae", "pca", "kpca"],
+        #     "delta": [0.05],
+        #     "update_epochs": [50],
+        #     "eta": [0.5],
+        #     "min_window_size": [100],
+        #     "max_window_size": [1000, 2000],
+        #     "batch_size": [500, 1000]
+        # },
         SlidingWindowDetector: {
             "model_id": ["ae", "pca", "kpca"],
             "delta": [0.05],
@@ -29,13 +29,13 @@ if __name__ == '__main__':
             "eta": [0.5],
             "window_size": [100, 200, 500]
         },
-        ABCD: {"encoding_factor": [0.5],
-               "delta": [0.05],
-               "update_epochs": [50],
-               "bonferroni": [False],
-               "split_type": ["ed"],
-               "num_splits": [20],
-               "model_id": ["ae", "pca", "kpca"]},
+        # ABCD: {"encoding_factor": [0.5],
+        #        "delta": [0.05],
+        #        "update_epochs": [50],
+        #        "bonferroni": [False],
+        #        "split_type": ["ed"],
+        #        "num_splits": [20],
+        #        "model_id": ["ae", "pca", "kpca"]},
     }
 
     algorithms = {

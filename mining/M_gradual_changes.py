@@ -10,7 +10,7 @@ import seaborn as sns
 from changeds.metrics import *
 from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, \
     get_abcd_hyperparameters_from_str, change_bar_width
-from E_gradual_changes import ename
+from E_abcd_model_ablation import ename
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
@@ -243,26 +243,26 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
             continue
         max_index = gdf["F1"].idxmax()
         indices.append(max_index)
-        if "ABCD0 (ae)" in gdf["Approach"].to_numpy():
-            max_indices.append(max_index)
-            if median:
-                med = gdf["F1"].dropna().median()
-                median_index = (gdf["F1"] - med).abs().idxmin()
-                if median_index == max_index and len(gdf) > 1:  # second clause should be particularly relevant for testing.
-                    median_index = (gdf["F1"] - med).abs().drop(max_index).idxmin()
-                median_indices.append(median_index)
-            if worst:
-                min_index = gdf["F1"].idxmin()
-                min_indices.append(min_index)
-    if median:
-        indices += median_indices
-        df["Approach"].loc[median_indices] = "ABCD (med)"
-    if worst:
-        indices += min_indices
-        df["Approach"].loc[min_indices] = "ABCD (min)"
-    indices = np.unique(indices)
+    #     if "ABCD0 (ae)" in gdf["Approach"].to_numpy():
+    #         max_indices.append(max_index)
+    #         if median:
+    #             med = gdf["F1"].dropna().median()
+    #             median_index = (gdf["F1"] - med).abs().idxmin()
+    #             if median_index == max_index and len(gdf) > 1:  # second clause should be particularly relevant for testing.
+    #                 median_index = (gdf["F1"] - med).abs().drop(max_index).idxmin()
+    #             median_indices.append(median_index)
+    #         if worst:
+    #             min_index = gdf["F1"].idxmin()
+    #             min_indices.append(min_index)
+    # if median:
+    #     indices += median_indices
+    #     df["Approach"].loc[median_indices] = "ABCD (med)"
+    # if worst:
+    #     indices += min_indices
+    #     df["Approach"].loc[min_indices] = "ABCD (min)"
     df["Approach"].loc[max_indices] = "ABCD (max)"
-    df = df.loc[indices]
+    # indices = np.unique(indices)
+    # df = df.loc[indices]
     if add_mean:
         df = add_mean_column(df)
     return df.reset_index()

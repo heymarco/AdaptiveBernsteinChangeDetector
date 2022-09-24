@@ -176,7 +176,7 @@ class SlidingWindowDetector(WindowAblation):
                 self.w1.popleft()
 
     def are_windows_large_enough(self) -> bool:
-        return len(self.w1) < self.window_size
+        return len(self.w1) == self.window_size
 
 
 class FixedReferenceWindowDetector(WindowAblation):
