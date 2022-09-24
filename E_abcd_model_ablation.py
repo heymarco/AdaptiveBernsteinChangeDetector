@@ -35,7 +35,7 @@ if __name__ == '__main__':
             "delta": [0.05],
             "update_epochs": [50],
             "eta": [0.5],
-            "window_size": [100, 200, 500]
+            "window_size": [100, 200, 500, 1000]
         },
         # ABCD: {"encoding_factor": [0.5],
         #        "delta": [0.05],
