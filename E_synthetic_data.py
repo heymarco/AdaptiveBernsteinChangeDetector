@@ -36,17 +36,6 @@ if __name__ == '__main__':
     n_reps = 30
     n_dims = [24, 100, 500]
     datasets = {
-<<<<<<< HEAD
-        # RBF: [{"num_concepts": num_concepts, "dims": d, "preprocess": preprocess, "n_per_concept": n_per_concept}
-        #       for d in n_dims],
-        # Gaussian: [{
-        #     "num_concepts": num_concepts, "n_per_concept": n_per_concept,
-        #     "dims": d, "preprocess": preprocess, "variance_drift": vd
-        # } for d in n_dims for vd in [False, True]],
-        # LED: [{
-        #     "num_concepts": num_concepts, "n_per_concept": n_per_concept, "preprocess": preprocess
-        # }],
-=======
         Gaussian: [{
             "num_concepts": num_concepts, "n_per_concept": n_per_concept,
             "dims": d, "preprocess": preprocess, "variance_drift": vd
@@ -54,7 +43,6 @@ if __name__ == '__main__':
         LED: [{
             "num_concepts": num_concepts, "n_per_concept": n_per_concept, "preprocess": preprocess
         }],
->>>>>>> b29e3441f2d05f0088963f07001778c14412270c
         Hypersphere: [{
             "num_concepts": num_concepts, "n_per_concept": n_per_concept,
             "dims": d

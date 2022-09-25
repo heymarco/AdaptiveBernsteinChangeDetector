@@ -34,8 +34,8 @@ if __name__ == '__main__':
                "update_epochs": [50],  # , 20, 100
                "bonferroni": [False],
                "split_type": ["ed"],
-               "num_splits": [50],
-               "model_id": ["dummy"]},
+               "num_splits": [20],
+               "model_id": ["ae", "pca", "kpca"]},
     }
 
     algorithms = {
