@@ -288,10 +288,11 @@ class JumpingWindowDetector(WindowAblation):
         return this_name + " ({})".format(self.model_id)
 
     def parameter_str(self) -> str:
-        return r"$\delta = {}, E = {}, \eta = {}, ws = {}$".format(self.delta,
-                                                                   self.epochs,
-                                                                   self.eta,
-                                                                   self.window_size)
+        return r"$\delta = {}, E = {}, \eta = {}, ws = {}, \rho = {}$".format(self.delta,
+                                                                              self.epochs,
+                                                                              self.eta,
+                                                                              self.window_size,
+                                                                              self.rho)
 
     def update_windows(self, new_value):
         self.w2.append(new_value)

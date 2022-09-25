@@ -82,8 +82,6 @@ def compare(print_summary: bool,
             for rep, rep_data in df.groupby("rep"):
                 true_cps = [i for i in rep_data.index if rep_data["is-change"].loc[i]]  # TODO: check if this is correct
                 cp_distance = 2000
-                if "MNIST" in dataset or "CIFAR" in dataset:
-                    cp_distance = 4000
                 reported_cps = [i for i in rep_data.index if rep_data["change-point"].loc[i]]
                 tp = true_positives(true_cps, reported_cps, cp_distance)
                 fp = false_positives(true_cps, reported_cps, cp_distance)
@@ -120,6 +118,7 @@ def compare(print_summary: bool,
     result_df["Approach"][result_df["Approach"] == "ABCD0 (pca)"] = "ABCD (pca)"
     result_df["Approach"][result_df["Approach"] == "ABCD0 (kpca)"] = "ABCD (kpca)"
     # result_df[result_df["Dataset"] == "Average"] = 0
+
     if print_summary:
         summary = summary.round(decimals={
             "F1": 2, "F0.5": 2, "F2": 2, "Prec.": 2, "Rec.": 2, "MTPO [ms]": 3, "MTD": 1
@@ -142,6 +141,24 @@ def compare(print_summary: bool,
     abcd_eta = abcd.sort_values(by="Dims")
     abcd_eta = pd.concat([average, abcd_eta], axis=0)
     abcd[r"$E$"] = abcd[r"$E$"].astype(int)
+
+    if "RW (kpca)" in np.unique(result_df["Approach"]):
+        avg_df = result_df.groupby(["Approach", "Dataset"]).mean().reset_index()
+        avg_df["Window"] = ""
+        avg_df["Model"] = ""
+        for index, row in avg_df.iterrows():
+            approach = row["Approach"]
+            alg, model = approach.split(" ")
+            model = model[1:-1]
+            row["Window"] = "AW" if alg == "ABCD" else alg
+            row["Model"] = model.upper()
+            avg_df.loc[index] = row
+        avg_df = avg_df[["Model", "Window", "F1", "Prec.", "Rec.", "MTD"]].sort_values(["Model", "Window"]).groupby(["Model", "Window"]).median()
+        print(avg_df.round(decimals={
+            "F1": 2, "Prec.": 2, "Rec.": 2, "MTD": 1
+        }).to_latex(escape=False))
+        del avg_df
+
     if plot_eta_sensitivity_study:
         g = sns.catplot(x=r"$\eta$", y="F1", col="Dataset", hue="Approach", errwidth=1, col_wrap=4,
                         data=abcd_eta, kind="bar", palette=sns.color_palette("Dark2"),
@@ -215,6 +232,29 @@ def compare(print_summary: bool,
         plt.tight_layout()
         plt.subplots_adjust(wspace=0.05)
         plt.savefig(os.path.join("..", "figures", "evaluation_gradual_changes.pdf"))
+        plt.show()
+
+        g = sns.catplot(data=melted_df[melted_df["Approach"] != "Average"],
+                        x="Approach", y="Value", row="Metric", kind="box",
+                        linewidth=0.7, fliersize=2, sharey="row", palette=sns.color_palette("Dark2")
+                        )
+        g.set(xlabel=None)
+        for i, ax in enumerate(plt.gcf().axes):
+            ax.set_xticks(ax.get_xticks())
+            ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+            col_title = ax.get_title().split(" = ")[-1]
+            if col_title.startswith("Normal"):
+                a, b = col_title.split("al")
+                col_title = a + "." + b
+            ax.set_title(col_title)
+            ax.set_ylabel("")  # (value_vars[i])
+        plt.xticks(rotation=45, ha='right')
+        plt.gcf().set_size_inches(3.8, 4.7)
+        plt.tight_layout()
+        plt.subplots_adjust(wspace=0.05)
+        plt.savefig(os.path.join("..", "figures", "evaluation_gradual_changes_presentation.pdf"))
         plt.show()
 
 

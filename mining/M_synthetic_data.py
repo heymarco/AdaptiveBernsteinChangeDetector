@@ -104,8 +104,6 @@ if __name__ == '__main__':
         j = 0
         for file in tqdm(all_files):
             j += 1
-            # if j > 10:
-            #     break
             df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes()
             df = fill_df(df)
             approach = np.unique(df["approach"])[0]
@@ -124,8 +122,6 @@ if __name__ == '__main__':
             for rep, rep_data in df.groupby("rep"):
                 true_cps = [i for i in rep_data.index if rep_data["is-change"].loc[i]]  # TODO: check if this is correct
                 cp_distance = 2000
-                if "MNIST" in dataset or "CIFAR" in dataset:
-                    cp_distance = 4000
                 reported_cps = [i for i in rep_data.index if rep_data["change-point"].loc[i]]
                 tp = true_positives(true_cps, reported_cps, cp_distance)
                 fp = false_positives(true_cps, reported_cps, cp_distance)
@@ -209,6 +205,36 @@ if __name__ == '__main__':
     plt.savefig(os.path.join("..", "figures", "evaluation_drift_region.pdf"))
     plt.show()
 
+    g = sns.catplot(data=melted_df[melted_df["Approach"] != "Average"],
+                    x="Approach", y="Value", row="Metric", kind="box",
+                    linewidth=0.7, fliersize=2, sharey="row", showfliers=False,
+                    palette=sns.color_palette("Dark2"))
+    g.set(xlabel=None)
+    for i, ax in enumerate(plt.gcf().axes):
+        ax.set_xticks(ax.get_xticks())
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        ax.set_ylabel("")
+        # if i == 0:
+        #     ax.set_ylabel("F1")
+        # if i == 1:
+        #     ax.set_ylabel("Jaccard")
+        # if i == 2:
+        #     ax.set_ylabel(r"Spearman $\rho$")
+        col_title = ax.get_title().split(" = ")[-1]
+        if col_title.startswith("Normal"):
+            a, b = col_title.split("al")
+            col_title = a + "." + b
+        if col_title == "Pearson R":
+            col_title = r"Spearman $\rho$"
+        ax.set_title(col_title)
+    plt.xticks(rotation=45, ha='right')
+    plt.gcf().set_size_inches(3.8, 4.7)
+    plt.tight_layout()
+    plt.subplots_adjust(left=0.15, wspace=0.1, right=0.98)
+    plt.savefig(os.path.join("..", "figures", "evaluation_drift_region_presentation.pdf"))
+    plt.show()
+
     melted_df = melted_df[melted_df["Metric"] != "F1"]
     abcd = np.logical_or(melted_df["Approach"] == "ABCD (ae)",
                          melted_df["Approach"] == "ABCD (pca)")
@@ -250,14 +276,4 @@ if __name__ == '__main__':
     plt.tight_layout(pad=0.5)
     plt.subplots_adjust(right=0.8)
     plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-eta-region-severity.pdf"))
-    plt.show()
-
-    abcd = np.logical_or(result_df["Approach"] == "ABCD (ae)",
-                         result_df["Approach"] == "ABCD (pca)")
-    abcd = np.logical_or(abcd, result_df["Approach"] == "ABCD (kpca)")
-    abcd = result_df[abcd]
-    abcd = abcd.sort_values(by="F1")
-    abcd = abcd[abcd["eta"] >= 0.5]
-    sns.relplot(kind="scatter", row="Dataset", data=abcd, x="F1", y="Pearson R", hue="Approach", col="Dims",
-                facet_kws={'sharey': False, 'sharex': False})
     plt.show()
