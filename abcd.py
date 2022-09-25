@@ -13,12 +13,12 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
     def __init__(self,
                  delta: float,
                  model_id: str = "ae",
-                 update_epochs: int = 20,
                  split_type: str = "ed",
-                 subspace_threshold: float = 2.1,
-                 bonferroni: bool = False,
-                 encoding_factor: float = 0.7,
-                 num_splits: int = 20):
+                 encoding_factor: float = 0.5,
+                 update_epochs: int = 50,
+                 num_splits: int = 20,
+                 subspace_threshold: float = 2.5,
+                 bonferroni: bool = False):
         """
         :param delta: The desired confidence level
         :param model_id: The name of the model to use

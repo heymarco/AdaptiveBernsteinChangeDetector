@@ -10,7 +10,7 @@ import seaborn as sns
 from changeds.metrics import *
 from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, \
     get_abcd_hyperparameters_from_str, change_bar_width
-from E_gradual_changes import ename
+from E_abcd_model_ablation import ename
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
@@ -54,7 +54,10 @@ def mean_time_per_example(df):
     return delta_t / delta_obs
 
 
-def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}):
+def compare(print_summary: bool,
+            plot_eta_sensitivity_study: bool = False,
+            plot_E_sensitivity_study: bool = False,
+            plot_gradual_changes_comparison: bool = False, summary_kwargs={"worst": False, "median": True}):
     last_exp_dir = get_last_experiment_dir(ename)
     all_files = os.listdir(last_exp_dir)
     cache_dir = create_cache_dir_if_needed(last_exp_dir)
@@ -108,23 +111,8 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
     result_df = result_df[["Dataset", "Dims", "Approach", "Parameters", "F0.5", "F1", "F2", "Prec.", "Rec.",
                            "MTD", "MTPO [ms]"]]
     if print_summary:
-        # result_df["MTD"] = 1 / result_df["MTD"]
-        # summary_best = result_df.groupby(["Dataset", "Approach"]).max().reset_index()
-        # result_df["MTD"] = 1 / result_df["MTD"]
-        # summary_best["Approach"][summary_best["Approach"] == "ABCD0 (ae)"] = "ABCD (AE, best)"
-        # summary_median = result_df[result_df["Approach"] == "ABCD0 (ae)"]
-        # summary_median = summary_median.groupby(["Dataset", "Approach"]).median().reset_index()
-        # summary_median["Approach"][summary_median["Approach"] == "ABCD0 (ae)"] = "ABCD (AE, med)"
-        # summary = pd.concat([summary_best, summary_median])
-        # summary["MTD"] = 1 / summary["MTD"]
-        # mean = summary.groupby(["Approach"]).mean().reset_index()
-        # mean["Dataset"] = "AVG"
-        # summary = pd.concat([summary, mean])
         summary = result_df.copy().groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
         summary = filter_best(summary, worst=False, median=True)
-    # result_df = result_df.round(decimals={
-    #     "F1": 2, "F0.5": 2, "F2": 2, "Prec.": 2, "Rec.": 2, "MTPO [ms]": 3, "MTD": 1
-    # })
     sort_by = ["Dims", "Dataset", "Approach", "Parameters"]
     result_df = result_df.sort_values(by=sort_by)
     result_df = result_df.apply(func=add_params_to_df, axis=1)
@@ -154,97 +142,80 @@ def compare(print_summary: bool, summary_kwargs={"worst": False, "median": True}
     abcd_eta = abcd.sort_values(by="Dims")
     abcd_eta = pd.concat([average, abcd_eta], axis=0)
     abcd[r"$E$"] = abcd[r"$E$"].astype(int)
-    # palette = sns.color_palette("Dark2", n_colors=len(np.unique(result_df["Approach"])))
-    g = sns.catplot(x=r"$\eta$", y="F1", col="Dataset", hue="Approach", errwidth=1, col_wrap=4,
-                    data=abcd_eta, kind="bar", palette=sns.color_palette("Dark2"),
-                    height=1 * 8 / 6, aspect=.6 * 5 / 4)
-    axes = plt.gcf().axes
-    plt.gcf().subplots_adjust(left=0.08)
-    for i, ax in enumerate(axes):
-        # ax.set_ylim(0.4, 1.0)
-        # ax.set_ylim(bottom=.2)
-        if i < 8:
-            current_title = ax.get_title()
-            dataset = current_title.split(" = ")[-1]
-            ax.set_title(dataset)
-        else:
-            ax.set_title("")
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    plt.tight_layout(pad=0.5)
-    plt.subplots_adjust(right=0.79)
-    plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-eta.pdf"))
-    plt.show()
+    if plot_eta_sensitivity_study:
+        g = sns.catplot(x=r"$\eta$", y="F1", col="Dataset", hue="Approach", errwidth=1, col_wrap=4,
+                        data=abcd_eta, kind="bar", palette=sns.color_palette("Dark2"),
+                        height=1 * 8 / 6, aspect=.6 * 5 / 4)
+        axes = plt.gcf().axes
+        plt.gcf().subplots_adjust(left=0.08)
+        for i, ax in enumerate(axes):
+            # ax.set_ylim(0.4, 1.0)
+            # ax.set_ylim(bottom=.2)
+            if i < 8:
+                current_title = ax.get_title()
+                dataset = current_title.split(" = ")[-1]
+                ax.set_title(dataset)
+            else:
+                ax.set_title("")
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        plt.tight_layout(pad=0.5)
+        plt.subplots_adjust(right=0.79)
+        plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-eta.pdf"))
+        plt.show()
 
-    abcd = abcd[abcd["Approach"] == "ae"]
-    abcd_E = abcd.copy()
-    average = abcd_E.copy() # '.groupby(["Approach", "Parameters", r"$E$"]).mean().reset_index()
-    average["Dataset"] = "Average"
-    abcd_E = abcd.sort_values(by="Dims")
-    abcd_E = pd.concat([average, abcd_E], axis=0)
-    ax = sns.barplot(x="Dataset", y="F1", hue="E", data=abcd_E, palette=sns.cubehelix_palette(n_colors=3), errwidth=1)
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
-    ax.set_xlabel("")
-    ax.set_ylim(bottom=.3)
-    ax.legend(title=r"$E$", loc='center left', bbox_to_anchor=(1, 0.5))
-    change_bar_width(ax, .23)
-    plt.gcf().set_size_inches((4.5, 1.8))
-    # g = sns.catplot(col=r"$E$", y="F1", x="Dataset", hue="Approach", errwidth=1,
-    #                 data=abcd, kind="bar", palette=sns.cubehelix_palette(n_colors=1),
-    #                 height=1.2, aspect=1, legend=False)
-    # axes = plt.gcf().axes
-    # plt.gcf().subplots_adjust(left=0.08)
-    # for i, ax in enumerate(axes):
-    #     # ax.set_ylim(0.4, 1.0)
-    #     if i < 8:
-    #         current_title = ax.get_title()
-    #         dataset = current_title.split(" = ")[-1]
-    #         ax.set_title(dataset)
-    #     else:
-    #         ax.set_title("")
-    #     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    plt.tight_layout()
-    plt.subplots_adjust(right=0.79)
-    plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-E.pdf"))
-    plt.show()
+    if plot_E_sensitivity_study:
+        abcd = abcd[abcd["Approach"] == "ae"]
+        abcd_E = abcd.copy()
+        average = abcd_E.copy() # '.groupby(["Approach", "Parameters", r"$E$"]).mean().reset_index()
+        average["Dataset"] = "Average"
+        abcd_E = abcd.sort_values(by="Dims")
+        abcd_E = pd.concat([average, abcd_E], axis=0)
+        n_colors = len(np.unique(abcd_E["Approach"]))
+        ax = sns.barplot(x="Dataset", y="F1", hue="E", data=abcd_E, palette=sns.cubehelix_palette(n_colors=n_colors), errwidth=1)
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+        ax.set_xlabel("")
+        ax.set_ylim(bottom=.3)
+        ax.legend(title=r"$E$", loc='center left', bbox_to_anchor=(1, 0.5))
+        change_bar_width(ax, .23)
+        plt.gcf().set_size_inches((4.5, 1.8))
+        plt.tight_layout()
+        plt.subplots_adjust(right=0.79)
+        plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-E.pdf"))
+        plt.show()
 
-    result_df = result_df.groupby(["Approach", "Parameters", "Dataset"]).mean().reset_index()
-    mean = result_df.groupby(["Approach", "Parameters"]).mean().reset_index()
-    mean["Dataset"] = "Average"
-    result_df = pd.concat([mean, result_df])
-    result_df["MTD (thousands)"] = result_df["MTD"] / 1000
-    value_vars = ["F1", "Prec.", "Rec.", "MTD (thousands)"]
-    melted_df = pd.melt(result_df, id_vars=["Dataset", "Approach"], value_vars=value_vars,
-                        var_name="Metric", value_name="Value")
-    melted_df = melted_df[melted_df["Value"].isna() == False]
-    g = sns.catplot(data=melted_df, x="Approach", y="Value", col="Dataset", row="Metric", kind="box",
-                    linewidth=0.7, fliersize=2, sharey="row", palette=sns.color_palette("Dark2")
-                    )
-    g.set(xlabel=None)
-    for i, ax in enumerate(plt.gcf().axes):
-        ax.set_xticks(ax.get_xticks())
-        ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        # if i == 0:
-        #     ax.set_ylabel("F1")
-        # if i == 7:
-        #     ax.set_ylabel("Jaccard")
-        # if i == 8:
-        #     ax.set_ylabel("Pearson R")
-        if i < 8:
-            col_title = ax.get_title().split(" = ")[-1]
-            if col_title.startswith("Normal"):
-                a, b = col_title.split("al")
-                col_title = a + "." + b
-            ax.set_title(col_title)
-        else:
-            ax.set_title("")
-        if i % 8 == 0:
-            ax.set_ylabel(value_vars[int(i / 8)])
-    plt.gcf().set_size_inches(3.5 * 2.5, 3.5 * 2)
-    plt.tight_layout()
-    plt.subplots_adjust(wspace=0.05)
-    plt.savefig(os.path.join("..", "figures", "evaluation_gradual_changes.pdf"))
-    plt.show()
+    if plot_gradual_changes_comparison:
+        result_df = result_df.groupby(["Approach", "Parameters", "Dataset"]).mean().reset_index()
+        mean = result_df.groupby(["Approach", "Parameters"]).mean().reset_index()
+        mean["Dataset"] = "Average"
+        result_df = pd.concat([mean, result_df])
+        result_df["MTD (thousands)"] = result_df["MTD"] / 1000
+        value_vars = ["F1", "Prec.", "Rec.", "MTD (thousands)"]
+        melted_df = pd.melt(result_df, id_vars=["Dataset", "Approach"], value_vars=value_vars,
+                            var_name="Metric", value_name="Value")
+        melted_df = melted_df[melted_df["Value"].isna() == False]
+        g = sns.catplot(data=melted_df, x="Approach", y="Value", col="Dataset", row="Metric", kind="box",
+                        linewidth=0.7, fliersize=2, sharey="row", palette=sns.color_palette("Dark2")
+                        )
+        g.set(xlabel=None)
+        for i, ax in enumerate(plt.gcf().axes):
+            ax.set_xticks(ax.get_xticks())
+            ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            if i < 8:
+                col_title = ax.get_title().split(" = ")[-1]
+                if col_title.startswith("Normal"):
+                    a, b = col_title.split("al")
+                    col_title = a + "." + b
+                ax.set_title(col_title)
+            else:
+                ax.set_title("")
+            if i % 8 == 0:
+                ax.set_ylabel(value_vars[int(i / 8)])
+        plt.gcf().set_size_inches(3.5 * 2.5, 3.5 * 2)
+        plt.tight_layout()
+        plt.subplots_adjust(wspace=0.05)
+        plt.savefig(os.path.join("..", "figures", "evaluation_gradual_changes.pdf"))
+        plt.show()
 
 
 def add_mean_column(df: pd.DataFrame):
@@ -272,30 +243,31 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
             continue
         max_index = gdf["F1"].idxmax()
         indices.append(max_index)
-        if "ABCD0 (ae)" in gdf["Approach"].to_numpy():
-            max_indices.append(max_index)
-            if median:
-                med = gdf["F1"].dropna().median()
-                median_index = (gdf["F1"] - med).abs().idxmin()
-                if median_index == max_index and len(gdf) > 1:  # second clause should be particularly relevant for testing.
-                    median_index = (gdf["F1"] - med).abs().drop(max_index).idxmin()
-                median_indices.append(median_index)
-            if worst:
-                min_index = gdf["F1"].idxmin()
-                min_indices.append(min_index)
-    if median:
-        indices += median_indices
-        df["Approach"].loc[median_indices] = "ABCD (med)"
-    if worst:
-        indices += min_indices
-        df["Approach"].loc[min_indices] = "ABCD (min)"
-    indices = np.unique(indices)
+    #     if "ABCD0 (ae)" in gdf["Approach"].to_numpy():
+    #         max_indices.append(max_index)
+    #         if median:
+    #             med = gdf["F1"].dropna().median()
+    #             median_index = (gdf["F1"] - med).abs().idxmin()
+    #             if median_index == max_index and len(gdf) > 1:  # second clause should be particularly relevant for testing.
+    #                 median_index = (gdf["F1"] - med).abs().drop(max_index).idxmin()
+    #             median_indices.append(median_index)
+    #         if worst:
+    #             min_index = gdf["F1"].idxmin()
+    #             min_indices.append(min_index)
+    # if median:
+    #     indices += median_indices
+    #     df["Approach"].loc[median_indices] = "ABCD (med)"
+    # if worst:
+    #     indices += min_indices
+    #     df["Approach"].loc[min_indices] = "ABCD (min)"
     df["Approach"].loc[max_indices] = "ABCD (max)"
-    df = df.loc[indices]
+    # indices = np.unique(indices)
+    # df = df.loc[indices]
     if add_mean:
         df = add_mean_column(df)
     return df.reset_index()
 
 
 if __name__ == '__main__':
-    compare(print_summary=True)
+    compare(print_summary=True,
+            plot_gradual_changes_comparison=True)

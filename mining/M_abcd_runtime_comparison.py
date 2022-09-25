@@ -70,6 +70,7 @@ if __name__ == '__main__':
     result_df["Approach"][result_df["Approach"] == "ABCD0 (pca)"] = "ABCD (pca)"
     result_df["Approach"][result_df["Approach"] == "ABCD0 (ae)"] = "ABCD (ae)"
     result_df["Approach"][result_df["Approach"] == "ABCD0 (kpca)"] = "ABCD (kpca)"
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (dummy)"] = "ABCD (dummy)"
 
     # print("Plotting MTPO over time")
     # sns.relplot(data=result_df, x=r"$t$", y="MTPO [ms]",
@@ -82,14 +83,12 @@ if __name__ == '__main__':
     # result_df.dropna(inplace=True)
     result_df = result_df.groupby(["Approach", "parameters", r"$d$", "rep"]).mean().reset_index()
     # result_df = result_df.groupby(["Approach", "parameters", r"$d$"]).rolling(60).mean().reset_index()
-
     result_df = result_df.sort_values(by=["Approach", "ndims"])
     result_df["ndims"] = result_df.ndims.apply(lambda x: r"${}$".format(int(x)))
     n_colors = len(np.unique(result_df["Approach"]))
     mpl.rcParams['figure.figsize'] = 3.5, 2.8
     # g = sns.catplot(data=result_df, y="Approach", x="MTPO [ms]", palette=sns.cubehelix_palette(n_colors),
     #                 col="ndims", kind="bar", orient="h", height=2)
-    print(result_df)
     ax = sns.barplot(data=result_df, y="Approach", x="MTPO [ms]",
                      hue="ndims",
                      errwidth=1,

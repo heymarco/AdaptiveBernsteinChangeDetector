@@ -46,11 +46,11 @@ class Experiment:
                         alg = algorithm(**config)
                         print("{}/{}: Run {} with {} on {}".format(i, self.total_runs, alg.name(),
                                                                    alg.parameter_str(), str(dataset_class)))
-                        self.repeat(alg, (dataset_class, ds_config), warm_start=warm_start,
+                        self.repeat((algorithm, config), (dataset_class, ds_config), warm_start=warm_start,
                                     parallel=parallel, n_jobs=n_jobs)
                         i += 1
 
-    def repeat(self, detector: DriftDetector, data: Tuple, warm_start: int = 100,
+    def repeat(self, detector: Tuple, data: Tuple, warm_start: int = 100,
                parallel: bool = True, n_jobs: int = 1000):
         data_class, data_config = data
         if parallel:
@@ -58,7 +58,7 @@ class Experiment:
             args_list = []
             for rep in range(self.reps):
                 data_config["seed"] = rep
-                alg = copy.deepcopy(detector)
+                alg = detector[0](**detector[1])
                 stream = data_class(**data_config)
                 args_list.append([alg, stream, rep, warm_start])
             dfs = run_async(self.evaluate_algorithm, args_list=args_list, njobs=njobs)
@@ -66,7 +66,7 @@ class Experiment:
             dfs = []
             for rep in range(self.reps):
                 stream = data_class(**data_config)
-                alg = copy.deepcopy(detector)
+                alg = detector[0](**detector[1])
                 dfs.append(self.evaluate_algorithm(alg, stream, rep=rep, warm_start=warm_start))
         df = pd.concat(dfs, axis=0, ignore_index=True)
         if self.condense_results:
