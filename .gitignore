@@ -132,3 +132,5 @@ figures/
 
 *.csv
 *.cyberducksegment
+
+src/
