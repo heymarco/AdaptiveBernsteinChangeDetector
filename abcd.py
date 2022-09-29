@@ -2,7 +2,6 @@ import numpy as np
 from changeds import QuantifiesSeverity
 
 from detectors import RegionalDriftDetector
-from scipy.stats import zscore
 
 from components.feature_extraction import AutoEncoder, EncoderDecoder, PCAModel, KernelPCAModel, DummyEncoderDecoder
 from components.windowing import AdaptiveWindow, p_bernstein
@@ -17,6 +16,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
                  encoding_factor: float = 0.5,
                  update_epochs: int = 50,
                  num_splits: int = 20,
+                 max_size: int = np.infty,
                  subspace_threshold: float = 2.5,
                  bonferroni: bool = False):
         """
@@ -33,8 +33,9 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.delta = delta
         self.bonferroni = bonferroni
         self.num_splits = num_splits
+        self.max_size = max_size
         self.subspace_threshold = subspace_threshold
-        self.window = AdaptiveWindow(delta=delta, split_type=split_type,
+        self.window = AdaptiveWindow(delta=delta, split_type=split_type, max_size=max_size,
                                      bonferroni=bonferroni, n_splits=num_splits)
         self.model: EncoderDecoder = None
         self.last_change_point = None
@@ -65,13 +66,15 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         return this_name + " ({})".format(self.model_id)
 
     def parameter_str(self) -> str:
-        return r"$\delta = {}, E = {}, \eta = {}, bc = {}$, st = {}, st = {}, n-splits = {}".format(self.delta,
-                                                                                                    self.epochs,
-                                                                                                    self.eta,
-                                                                                                    self.bonferroni,
-                                                                                                    self.split_type,
-                                                                                                    self.subspace_threshold,
-                                                                                                    self.num_splits)
+        return r"$\delta = {}, E = {}, \eta = {}, bc = {}$, st = {}, st = {}, n-splits = {}, max_size = {}".format(
+            self.delta,
+            self.epochs,
+            self.eta,
+            self.bonferroni,
+            self.split_type,
+            self.subspace_threshold,
+            self.num_splits,
+            self.max_size)
 
     def set_logger(self, l: ExperimentLogger):
         self.logger = l
