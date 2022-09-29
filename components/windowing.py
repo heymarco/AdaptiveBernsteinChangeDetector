@@ -166,7 +166,7 @@ class AdaptiveWindow:
                 self._cut_indices = np.arange(k_min, k_max + 1)
             else:
                 dist = int(interval / n_points)
-                cut_indices = (k_min + k_max) - np.arange(k_min, k_max + 1, dist)  # [-n_points:]
+                cut_indices = (k_min + k_max) - np.arange(k_min, k_max + 1, dist)[:n_points]
                 self._cut_indices = cut_indices
         elif self.split_type == "all":
             self._cut_indices = list(range(k_min, k_max, 1))
