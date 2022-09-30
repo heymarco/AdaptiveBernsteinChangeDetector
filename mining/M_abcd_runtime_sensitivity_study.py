@@ -7,7 +7,7 @@ import pandas as pd
 from matplotlib.ticker import FormatStrFormatter
 from tqdm import tqdm
 
-from E_abcd_runtime_comparison import ename
+from E_abcd_runtime_sensitivity_study import ename
 from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, get_E_and_eta, \
     get_abcd_hyperparameters_from_str, get_d3_hyperparameters_from_str, move_legend_below_graph
 
@@ -45,7 +45,7 @@ if __name__ == '__main__':
         for (rep, ndims, approach, params), rep_data in tqdm(result_df.groupby(["rep", "ndims", "approach", "parameters"])):
             if "ABCD" in approach:
                eta = get_E_and_eta(params)[1]
-               n_splits = get_abcd_hyperparameters_from_str(params)[-1]
+               n_splits = get_abcd_hyperparameters_from_str(params)[-2]
             else:
                 eta = np.nan
                 n_splits = np.nan
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     result_df["time"] = result_df["time"] / 10E6  # milliseconds
     result_df["MTPO [ms]"] = result_df["MTPO"] / 10E6
     result_df[r"$|W|$"] = result_df[r"$|\mathcal{W}|$"]
-    # result_df = result_df[result_df["MTPO [ms]"] < 10]
+    result_df = result_df[result_df["MTPO [ms]"] < 3]
     result_df[r"$d$"] = result_df["ndims"].astype(int)
     result_df["Approach"] = result_df["approach"]
     result_df["Approach"][result_df["Approach"] == "ABCD0 (pca)"] = "ABCD (pca)"
@@ -80,45 +80,25 @@ if __name__ == '__main__':
     # plt.yscale("log")
     # plt.show()
 
-    # result_df.dropna(inplace=True)
-    result_df = result_df.groupby(["Approach", "parameters", r"$d$", "rep"]).mean().reset_index()
-    # result_df = result_df.groupby(["Approach", "parameters", r"$d$"]).rolling(60).mean().reset_index()
-    result_df = result_df.sort_values(by=["Approach", "ndims"])
-    result_df["ndims"] = result_df.ndims.apply(lambda x: r"${}$".format(int(x)))
-    n_colors = len(np.unique(result_df["Approach"]))
-    mpl.rcParams['figure.figsize'] = 3.5, 2.8
-    # g = sns.catplot(data=result_df, y="Approach", x="MTPO [ms]", palette=sns.cubehelix_palette(n_colors),
-    #                 col="ndims", kind="bar", orient="h", height=2)
-    ax = sns.barplot(data=result_df, y="Approach", x="MTPO [ms]",
-                     hue="ndims",
-                     errwidth=1,
-                     palette=sns.cubehelix_palette(4),
-                     # showfliers=False,
-                     orient="h")
-    # ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
-    ax.set_ylabel("")
-    ax.set_xscale("log")
-    ax.set_xlim(left=0)
-    ax.legend(title='')
+    print(np.max(result_df[r"$k_{max}$"]))
 
-    move_legend_below_graph(np.array([ax]), ncol=4, title="Number of dimensions")
-
-    # g.set(xscale="log")
-    # g.set(ylabel="")
-    plt.tight_layout(pad=.5)
-    plt.gcf().subplots_adjust(bottom=0.33)
-    plt.savefig(os.path.join(os.getcwd(), "..", "figures", "mtpo.pdf"))
-    plt.show()
+    result_df = result_df.groupby(["Approach", "parameters", r"$d$", r"$\eta$", r"$|W|$", r"$k_{max}$"]).mean().reset_index()
+    result_df = result_df.sort_values(by=["Approach", r"$d$", r"$|W|$"])
+    result_df = result_df.groupby(["Approach", "parameters", r"$d$", r"$\eta$"]).rolling(60).mean().reset_index()
+    result_df[r"$d$"] = result_df[r"$d$"].apply(lambda x: r"${}$".format(int(x)))
 
     mask = result_df["Approach"] == "ABCD (ae)"
     mask = np.logical_or(mask, result_df["Approach"] == "ABCD (pca)")
     mask = np.logical_or(mask, result_df["Approach"] == "ABCD (kpca)")
+    mask = np.logical_and(mask, result_df[r"$d$"] != r"$10000$")
     result_df = result_df[mask]
 
-    g = sns.relplot(data=result_df, x=r"$|W|$", y="MTPO [ms]", ci=None, facet_kws={"sharey": False},
+    n_colors = len(np.unique(r"$d$"))
+    g = sns.relplot(data=result_df[result_df[r"$k_{max}$"] == 10],
+                    x=r"$|W|$", y="MTPO [ms]", ci=None, facet_kws={"sharey": False},
                     col=r"$\eta$",  # col=r"$\eta$",
                     hue=r"$d$", style="Approach", kind="line",
-                height=1.75, aspect=0.8 * 5 / 3, palette=sns.cubehelix_palette(n_colors=4)[1:])
+                height=1.75, aspect=0.8 * 5 / 3, palette=sns.cubehelix_palette(n_colors=n_colors+1)[1:])
     # plt.yscale("log")
     axes = plt.gcf().axes
     plt.gcf().subplots_adjust(left=0.08)
@@ -130,10 +110,10 @@ if __name__ == '__main__':
     plt.savefig(os.path.join("..", "figures", "runtime_eta.pdf"))
     plt.show()
     #
-    g = sns.relplot(data=result_df, x=r"$|W|$", y="MTPO [ms]", ci=None, facet_kws={"sharey": False},
+    g = sns.relplot(data=result_df[::100], x=r"$|W|$", y="MTPO [ms]", ci=None, facet_kws={"sharey": False},
                     col=r"$k_{max}$",  # col=r"$\eta$",
                     hue=r"$d$", style="Approach", kind="line",
-                    height=1.75, aspect=0.8 * 5 / 3, palette=sns.cubehelix_palette(n_colors=4)[1:])
+                    height=1.75, aspect=0.8 * 5 / 3, palette=sns.cubehelix_palette(n_colors=n_colors+1)[1:])
     # plt.yscale("log")
     axes = plt.gcf().axes
     plt.gcf().subplots_adjust(left=0.08)
