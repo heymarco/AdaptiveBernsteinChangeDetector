@@ -1,6 +1,6 @@
 # Adaptive Bernstein Change Detector for High-Dimensional Data Streams 
 
-This repository contains code for the paper "Adaptive Bernstein Change Detector for High-Dimensional Data Streams" currently under review at ICDE 2023.
+This repository contains code for the paper "Adaptive Bernstein Change Detector for High-Dimensional Data Streams".
 
 ## Installation of dependencies
 
