@@ -9,8 +9,8 @@ import seaborn as sns
 
 from changeds.metrics import *
 from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, \
-    get_abcd_hyperparameters_from_str, change_bar_width
-from E_abcd_model_ablation import ename
+    get_abcd_hyperparameters_from_str, change_bar_width, cm2inch
+from E_gradual_changes import ename
 
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
@@ -57,7 +57,8 @@ def mean_time_per_example(df):
 def compare(print_summary: bool,
             plot_eta_sensitivity_study: bool = False,
             plot_E_sensitivity_study: bool = False,
-            plot_gradual_changes_comparison: bool = False, summary_kwargs={"worst": False, "median": True}):
+            plot_gradual_changes_comparison: bool = False,
+            summary_kwargs={"worst": False, "median": True}):
     last_exp_dir = get_last_experiment_dir(ename)
     all_files = os.listdir(last_exp_dir)
     cache_dir = create_cache_dir_if_needed(last_exp_dir)
@@ -143,6 +144,9 @@ def compare(print_summary: bool,
     abcd[r"$E$"] = abcd[r"$E$"].astype(int)
 
     if "RW (kpca)" in np.unique(result_df["Approach"]):
+        result_df["Approach"][result_df["Approach"] == "FRW (ae)"] = "RW (ae)"
+        result_df["Approach"][result_df["Approach"] == "FRW (kpca)"] = "RW (kpca)"
+        result_df["Approach"][result_df["Approach"] == "FRW (pca)"] = "RW (pca)"
         avg_df = result_df.groupby(["Approach", "Dataset"]).mean().reset_index()
         avg_df["Window"] = ""
         avg_df["Model"] = ""
@@ -150,33 +154,38 @@ def compare(print_summary: bool,
             approach = row["Approach"]
             alg, model = approach.split(" ")
             model = model[1:-1]
+            # alg = "RW" if alg == "FRW" else alg
             row["Window"] = "AW" if alg == "ABCD" else alg
             row["Model"] = model.upper()
             avg_df.loc[index] = row
         avg_df = avg_df[["Model", "Window", "F1", "Prec.", "Rec.", "MTD"]].sort_values(["Model", "Window"]).groupby(["Model", "Window"]).median()
         print(avg_df.round(decimals={
             "F1": 2, "Prec.": 2, "Rec.": 2, "MTD": 1
-        }).to_latex(escape=False))
+        }).to_latex(escape=False))  # (escape=False))
         del avg_df
 
     if plot_eta_sensitivity_study:
         g = sns.catplot(x=r"$\eta$", y="F1", col="Dataset", hue="Approach", errwidth=1, col_wrap=4,
                         data=abcd_eta, kind="bar", palette=sns.color_palette("Dark2"),
-                        height=1 * 8 / 6, aspect=.6 * 5 / 4)
-        axes = plt.gcf().axes
-        plt.gcf().subplots_adjust(left=0.08)
+                        height=cm2inch(3)[0], aspect=3.2/4, sharex=False)
+        axes = g.axes
         for i, ax in enumerate(axes):
-            # ax.set_ylim(0.4, 1.0)
-            # ax.set_ylim(bottom=.2)
+            ax.axhline(0.25, lw=0.7, ls="--", color="gray", zorder=0)
+            ax.axhline(0.75, lw=0.7, ls="--", color="gray", zorder=0)
+            ax.axhline(.5, lw=0.7, ls="--", color="gray", zorder=0)
+            ax.axhline(1, lw=0.7, ls="--", color="gray", zorder=0)
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
             if i < 8:
                 current_title = ax.get_title()
                 dataset = current_title.split(" = ")[-1]
                 ax.set_title(dataset)
             else:
                 ax.set_title("")
-            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            ax.set_xticks(ax.get_xticks(), [])
+            if i >= 4:
+                ax.set_xticklabels([0.3, 0.5, 0.7])
         plt.tight_layout(pad=0.5)
-        plt.subplots_adjust(right=0.79)
+        plt.gcf().subplots_adjust(right=0.8)
         plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-eta.pdf"))
         plt.show()
 
@@ -187,16 +196,19 @@ def compare(print_summary: bool,
         average["Dataset"] = "Average"
         abcd_E = abcd.sort_values(by="Dims")
         abcd_E = pd.concat([average, abcd_E], axis=0)
-        n_colors = len(np.unique(abcd_E["Approach"]))
+        n_colors = len(np.unique(abcd_E["E"]))
         ax = sns.barplot(x="Dataset", y="F1", hue="E", data=abcd_E, palette=sns.cubehelix_palette(n_colors=n_colors), errwidth=1)
-        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+        # ax.set_xticklabels(ax.get_xticklabels(), rotation=30, ha='right')
         ax.set_xlabel("")
+        ax.axhline(0.5, color="gray", lw=0.7, ls="--", zorder=0)
+        ax.axhline(0.75, color="gray", lw=0.7, ls="--", zorder=0)
+        ax.axhline(1, color="gray", lw=0.7, ls="--", zorder=0)
         ax.set_ylim(bottom=.3)
-        ax.legend(title=r"$E$", loc='center left', bbox_to_anchor=(1, 0.5))
+        ax.legend(title=r"$E$", loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
         change_bar_width(ax, .23)
-        plt.gcf().set_size_inches((4.5, 1.8))
-        plt.tight_layout()
-        plt.subplots_adjust(right=0.79)
+        plt.gcf().set_size_inches(cm2inch(16, 3))
+        plt.tight_layout(pad=.5)
+        plt.subplots_adjust(right=0.85)
         plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-E.pdf"))
         plt.show()
 
@@ -228,6 +240,17 @@ def compare(print_summary: bool,
                 ax.set_title("")
             if i % 8 == 0:
                 ax.set_ylabel(value_vars[int(i / 8)])
+            if i >= 3 * 8:
+                ax.axhline(1e0, color="gray", lw=0.7, ls="--", zorder=0)
+                ax.axhline(1e-1, color="gray", lw=0.7, ls="--", zorder=0)
+                ax.axhline(1e-2, color="gray", lw=0.7, ls="--", zorder=0)
+                ax.set_yscale("log")
+            else:
+                ax.axhline(0.0, color="gray", lw=0.7, ls="--", zorder=0)
+                ax.axhline(0.25, color="gray", lw=0.7, ls="--", zorder=0)
+                ax.axhline(0.5, color="gray", lw=0.7, ls="--", zorder=0)
+                ax.axhline(0.75, color="gray", lw=0.7, ls="--", zorder=0)
+                ax.axhline(1.0, color="gray", lw=0.7, ls="--", zorder=0)
         plt.gcf().set_size_inches(3.5 * 2.5, 3.5 * 2)
         plt.tight_layout()
         plt.subplots_adjust(wspace=0.05)
@@ -301,8 +324,8 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
     #     indices += min_indices
     #     df["Approach"].loc[min_indices] = "ABCD (min)"
     df["Approach"].loc[max_indices] = "ABCD (max)"
-    # indices = np.unique(indices)
-    # df = df.loc[indices]
+    indices = np.unique(indices)
+    df = df.loc[indices]
     if add_mean:
         df = add_mean_column(df)
     return df.reset_index()
@@ -310,4 +333,6 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
 
 if __name__ == '__main__':
     compare(print_summary=True,
-            plot_gradual_changes_comparison=True)
+            plot_E_sensitivity_study=False,
+            plot_eta_sensitivity_study=False,
+            plot_gradual_changes_comparison=False)

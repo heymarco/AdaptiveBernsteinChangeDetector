@@ -62,57 +62,76 @@ if __name__ == '__main__':
                                                           "approach", "has changed", "p-value"])
         result_df.to_csv(os.path.join(cache_dir, "cached-p-values.csv"), index=False)
 
-    steps = 40
-    max_thresh = 4
-    evaluated_thresholds = max_thresh - max_thresh * np.arange(steps + 1) / steps
     result = []
     groupby = ["dataset", "approach", "params", "rep"]
     result_df = result_df[result_df["dataset"] != "RBF"]
-    for keys, gdf in result_df.groupby(groupby):
-        gt = gdf["has changed"]
-        p = gdf["p-value"]
-        for thresh in evaluated_thresholds:
-            assert p.shape == gt.shape
-            subspaces = p < thresh
-            found_indices = subspaces[subspaces].index
-            gt_indices = gt[gt].index
-            intersect = np.intersect1d(gt_indices, found_indices)
-            union = np.union1d(found_indices, gt_indices)
-            jaccard = len(intersect) / len(union)
-            tp = np.sum(np.logical_and(subspaces, gt))
-            fp = np.sum(np.logical_and(subspaces, np.invert(gt)))
-            fn = np.sum(np.logical_and(np.invert(subspaces), gt))
-            prec = tp / (tp + fp)
-            rec = tp / (tp + fn)
-            f1 = 2 * prec * rec / (prec + rec)
-            result.append(list(keys) + [jaccard, prec, rec, f1, thresh])
-    result = pd.DataFrame(result, columns=groupby + ["Jaccard", "Prec.", "Rec.", "F1", r"$\tau$"])
+    if os.path.exists(os.path.join(cache_dir, "cached_tau_results.csv")):
+        result = pd.read_csv(os.path.join(cache_dir, "cached_tau_results.csv"))
+    else:
+        steps = 40
+        max_thresh = 4
+        evaluated_thresholds = np.arange(0, max_thresh * steps + 1) / steps
+        print(evaluated_thresholds)
+        for keys, gdf in result_df.groupby(groupby):
+            gt = gdf["has changed"]
+            p = gdf["p-value"]
+            for thresh in evaluated_thresholds:
+                assert p.shape == gt.shape
+                subspaces = p < thresh
+                found_indices = subspaces[subspaces].index
+                gt_indices = gt[gt].index
+                intersect = np.intersect1d(gt_indices, found_indices)
+                union = np.union1d(found_indices, gt_indices)
+                jaccard = len(intersect) / len(union)
+                tp = np.sum(np.logical_and(subspaces, gt))
+                fp = np.sum(np.logical_and(subspaces, np.invert(gt)))
+                fn = np.sum(np.logical_and(np.invert(subspaces), gt))
+                tn = np.sum(np.logical_and(np.invert(gt), np.invert(subspaces)))
+                prec = tp / (tp + fp)
+                rec = tp / (tp + fn)
+                f1 = 2 * prec * rec / (prec + rec)
+                accuracy = (tp + tn) / (tp + tn + fp + fn)
+                result.append(list(keys) + [accuracy, jaccard, prec, rec, f1, thresh])
+        result = pd.DataFrame(result, columns=groupby + ["Accuracy", "Jaccard", "Prec.", "Rec.", "F1", r"$\tau$"])
+        result.to_csv(os.path.join(cache_dir, "cached_tau_results.csv"), index=False)
+
     avg_df = result.copy().groupby([r"$\tau$", "approach"]).mean().reset_index()
     avg_df["dataset"] = "Avg."
     result = pd.concat([result, avg_df]).reset_index()
     result = result.sort_values(by=["dataset"], ascending=False)
     n_colors = len(np.unique(result["dataset"]))
-    sns.set_palette(sns.cubehelix_palette())
+    sns.set_palette(sns.color_palette("Dark2"))
     # result = result.melt(id_vars=["dataset", "approach", "params", "rep", r"$\tau$"],
     #                      value_vars=["Jaccard", "Prec.", "Rec.", "F1"],
     #                      var_name="Metric", value_name="Score")
     # result = result[result["Metric"] != "Jaccard"].sort_values(by="Metric").sort_values(by="dataset", ascending=False)
+    # result[result["Metric"] == "F1"] = "F1 (subspace)"
     result = result.sort_values(by="approach").sort_values(by="dataset", ascending=False)
-    g = sns.relplot(data=result, x=r"$\tau$", y="Jaccard", hue="dataset", col="approach",
+    g = sns.relplot(data=result, x=r"$\tau$", y="Accuracy", hue="dataset",
+                    col="approach",
+                    height=cm2inch(4)[0], aspect=1.2,
                     kind="line", legend=False, ci=False)
-    plt.gcf().set_size_inches((3.8, 2))
-    lines = g.figure.axes[-1].get_lines()
-    labels = np.unique(result["dataset"])
-    labels = pd.Series(labels).sort_values(ascending=False)
-    # titles = ["F1", "Rec.", "Prec."]
-    plt.figlegend(lines, labels, loc='lower center', frameon=False, ncol=3, title=None)
+    # plt.gcf().set_size_inches(cm2inch((16, 4)))
+    # max_vals = result.groupby(["approach", r"$\tau$"]).mean().max().reset_index
     for i, ax in enumerate(g.figure.axes):
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         col_title = ax.get_title().split(" = ")[-1]
         col_title = col_title.split("0")[0] + col_title.split("0")[1]
         ax.set_title(col_title)
-    plt.tight_layout()
-    plt.subplots_adjust(bottom=0.47)
+        # max_tau = max_vals[max_vals["Approach"] == col_title].iloc[0][r"$\tau$"]
+        ax.axhline(0.25, color="gray", lw=0.7, ls="--", zorder=0)
+        ax.axhline(0.5, color="gray", lw=0.7, ls="--", zorder=0)
+        ax.axhline(0.75, color="gray", lw=0.7, ls="--", zorder=0)
+        # plt.axvline(max_tau, lw=0.7, zorder=0)
+        ax.set_xticks([0, 2, 4])
+        ax.set_xticklabels([0, 2, 4])
+    lines = g.figure.axes[-1].get_lines()
+    labels = np.unique(result["dataset"]).tolist()
+    labels = pd.Series(labels).sort_values(ascending=False)
+    # titles = ["F1", "Rec.", "Prec."]
+    plt.figlegend(lines, labels, loc='center right', frameon=False, ncol=1, title=None)
+    plt.tight_layout(pad=.5)
+    plt.gcf().subplots_adjust(right=.77)
     plt.savefig(os.path.join(os.getcwd(), "..", "figures", "tau_sensitivity.pdf"))
     plt.show()
 

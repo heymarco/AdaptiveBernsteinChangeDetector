@@ -18,8 +18,8 @@ if __name__ == '__main__':
             "delta": [0.05],
             "update_epochs": [50],
             "eta": [0.5],
-            "window_size": [100, 250, 500, 750, 1000],  # 750
-            "rho": [0.6, 0.8, 1.0]  # 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0
+            "window_size": [100, 250, 500, 750, 1000],
+            "rho": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0]
         },
         FixedReferenceWindowDetector: {
             "model_id": ["ae", "pca", "kpca"],
@@ -28,22 +28,22 @@ if __name__ == '__main__':
             "eta": [0.5],
             "min_window_size": [100],
             "max_window_size": [1000, 2000],
-            "batch_size": [100, 250, 750] # 100, 250, 500, 750, 1000
+            "batch_size": [100, 250, 500, 750, 1000]
         },
         SlidingWindowDetector: {
             "model_id": ["ae", "pca", "kpca"],
             "delta": [0.05],
             "update_epochs": [50],
             "eta": [0.5],
-            "window_size": [100, 200, 500, 750, 1000]  # 100, 200, 500, 750, 1000
+            "window_size": [100, 200, 500, 750, 1000]
         },
-        # ABCD: {"encoding_factor": [0.5],
-        #        "delta": [0.05],
-        #        "update_epochs": [50],
-        #        "bonferroni": [False],
-        #        "split_type": ["ed"],
-        #        "num_splits": [20],
-        #        "model_id": ["ae", "pca", "kpca"]},
+        ABCD: {"encoding_factor": [0.5],
+               "delta": [0.05],
+               "update_epochs": [50],
+               "bonferroni": [False],
+               "split_type": ["ed"],
+               "num_splits": [20],
+               "model_id": ["ae", "pca", "kpca"]},
     }
 
     algorithms = {

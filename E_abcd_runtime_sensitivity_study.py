@@ -19,18 +19,31 @@ from abcd import ABCD
 from exp_logging.experiment import Experiment
 from util import preprocess
 
-ename = "abcd_runtime_comparison"
+ename = "abcd_runtime_sensitivity_study"
 
 if __name__ == '__main__':
     parameter_choices = {
-        # WATCH: {"kappa": [100], "mu": [1000, 2000], "epsilon": [2, 3], "omega": [500, 1000]},
-        # AdwinK: {"k": [0.1, 0.2, 0.3], "delta": [0.05]},
-        # IBDD: {"w": [100, 200, 300], "m": [10, 20, 50, 100]}, 
-        # D3: {"w": [100, 200, 500], "roh": [0.1, 0.3, 0.5], "tau": [0.7, 0.8, 0.9]},
-        ABCD: {"encoding_factor": [0.3, 0.5, 0.7], "delta": [1e-10], "update_epochs": [50],
-               "bonferroni": [False], "split_type": ["ed"], "num_splits": [10, 100, 1000],
+        WATCH: {"kappa": [100],
+                "mu": [1000, 2000],
+                "epsilon": [2, 3],
+                "omega": [500, 1000]},
+        AdwinK: {"k": [0.5],
+                 "delta": [1e-10]},
+        IBDD: {"w": [100, 200, 300],
+               "m": [10, 20, 50, 100]},
+        D3: {"w": [100, 200, 500],
+             "roh": [0.1, 0.3, 0.5],
+             "tau": [0.7, 0.8, 0.9],
+             "model_id": ["lr", "dt"]},
+        ABCD: {"encoding_factor": [0.3, 0.5, 0.7],
+               "delta": [1e-10],
+               "update_epochs": [50],
+               "bonferroni": [False],
+               "split_type": ["ed"],
+               "num_splits": [10, 100, 1000],
                "model_id": ["kpca", "pca", "ae"]},
-        # IncrementalKS: {"w": [100, 200, 500], "delta": [1e-10]}
+        IncrementalKS: {"w": [100, 200, 500],
+                        "delta": [1e-10]}
     }
 
     algorithms = {

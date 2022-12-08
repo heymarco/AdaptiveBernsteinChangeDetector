@@ -7,10 +7,13 @@ from tqdm import tqdm
 from util import new_dir_for_experiment_with_name
 
 if __name__ == '__main__':
-    ename = "abcd_model_ablation"
-    approaches = ["ABCD0 (ae)", "ABCD0 (kpca)", "ABCD0 (pca)", "RW (ae)", "RW (kpca)", "RW (pca)"]
-    datasets = False
-    folder_nr = 6
+    ename = "gradual_changes"
+    approaches = [
+        # "ABCD0 (ae)", "ABCD0 (kpca)", "ABCD0 (pca)",
+        "AdwinK", "IBDD", "IKS", "WATCH", "D3"
+    ]
+    datasets = False  # ["LED"]
+    folder_nr = 10
     from_dir = os.path.join(os.getcwd(), "results", "experiments", ename, str(folder_nr))
     to_dir = new_dir_for_experiment_with_name(ename)
     all_files = os.listdir(from_dir)

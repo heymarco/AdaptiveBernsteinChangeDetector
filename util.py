@@ -21,11 +21,17 @@ def new_dir_for_experiment_with_name(name: str) -> str:
     if not os.path.exists(this_exp_dir):
         os.mkdir(this_exp_dir)
     filenames = os.listdir(this_exp_dir)
-    filenames = [int(f) for f in filenames]
-    if len(filenames) == 0:
+    parsed_filenames = []
+    for f in filenames:
+        try:
+            int_f = int(f)
+            parsed_filenames.append(int_f)
+        except:
+            pass
+    if len(parsed_filenames) == 0:
         new_dir = "1"
     else:
-        last_dir = np.sort(filenames)[-1]
+        last_dir = np.sort(parsed_filenames)[-1]
         new_dir = str(last_dir + 1)
     new_path = os.path.join(this_exp_dir, new_dir)
     os.mkdir(new_path)
@@ -52,8 +58,17 @@ def new_filepath_in_experiment_with_name(name: str) -> str:
 def get_last_experiment_dir(name: str):
     this_exp_dir = os.path.join(exp_dir, name)
     exps = os.listdir(this_exp_dir)
-    ids = [int(os.path.splitext(e)[0]) for e in exps]
-    current_dir = str(np.sort(ids)[-1])
+    ids = [os.path.splitext(e)[0] for e in exps]
+    if "final" in ids:
+        current_dir = "final"
+    else:
+        int_ids = []
+        for id in ids:
+            try:
+                int_ids.append(int(id))
+            except:
+                pass
+        current_dir = np.max(int_ids)
     return os.path.join(this_exp_dir, str(current_dir))
 
 
@@ -171,4 +186,3 @@ def change_bar_width(ax, new_value):
 
         # we recenter the bar
         patch.set_x(patch.get_x() + diff * .5)
-

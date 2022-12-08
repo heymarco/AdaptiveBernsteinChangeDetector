@@ -30,12 +30,13 @@ def add_mean_column(df: pd.DataFrame):
     return df.set_index(["Dataset", "Approach", "Parameters"])
 
 
-def compute_region_metrics(df: pd.DataFrame, thresh: float = 2.3):
+def compute_region_metrics(df: pd.DataFrame, thresh: float = 2.2):
     if not np.any(pd.isnull(df["dims-found"]) == False):
-        return np.nan, np.nan, np.nan
+        return np.nan, np.nan, np.nan, np.nan
     changes = df["change-point"]
     idxs = [i for i, change in enumerate(changes) if change]
     regions_gt = df["dims-gt"].iloc[idxs]
+    all_dims = df["ndims"].iloc[idxs]
     if "ABCD" in df["approach"].iloc[0]:
         regions_detected = df["dims-p"].iloc[idxs]
         regions_detected = [str_to_arr(s, float) for s in regions_detected]
@@ -46,26 +47,33 @@ def compute_region_metrics(df: pd.DataFrame, thresh: float = 2.3):
     jaccard_scores = []
     prec_scores = []
     recall_scores = []
-    for a, b in zip(regions_gt, regions_detected):
+    acc_scores = []
+    for gt, found, dims in zip(regions_gt, regions_detected, all_dims):
         try:
-            a = str_to_arr(a, int)
+            gt = str_to_arr(gt, int)
             if not "ABCD" in df["approach"].iloc[0]:
-                b = str_to_arr(b, int)
-            jac = jaccard(a, b) if len(b) > 0 else np.nan
-            tp = len(np.intersect1d(a, b))
-            fp = len(np.setdiff1d(b, np.intersect1d(a, b)))
-            fn = len(np.setdiff1d(a, np.intersect1d(a, b)))
+                found = str_to_arr(found, int)
+            full_space = np.arange(dims)
+            jac = jaccard(gt, found) if len(found) > 0 else np.nan
+            tp = len(np.intersect1d(gt, found))
+            fp = len(np.setdiff1d(found, np.intersect1d(gt, found)))
+            fn = len(np.setdiff1d(gt, np.intersect1d(gt, found)))
+            tn = len(np.intersect1d(np.setdiff1d(full_space, gt),
+                                    np.setdiff1d(full_space, found)))
             prec = tp / (tp + fp)
             rec = tp / (tp + fn)
+            acc = (tp + tn) / (tp + tn + fp + fn)
             jaccard_scores.append(jac)
             prec_scores.append(prec)
             recall_scores.append(rec)
+            acc_scores.append(acc)
         except:
             continue
     jac = np.nanmean(jaccard_scores) if len(jaccard_scores) > 0 else np.nan
     prec = np.nanmean(prec_scores) if len(prec_scores) > 0 else np.nan
     rec = np.nanmean(recall_scores) if len(recall_scores) > 0 else np.nan
-    return jac, prec, rec
+    acc = np.nanmean(acc_scores) if len(acc_scores) > 0 else np.nan
+    return jac, prec, rec, acc
 
 
 def compute_severity_metric(df: pd.DataFrame):
@@ -79,7 +87,6 @@ def compute_severity_metric(df: pd.DataFrame):
     na_indices = [i for i in range(len(x)) if pd.isna(x[i])]
     x = np.delete(x, na_indices)
     y = np.delete(y, na_indices)
-    rep = np.unique(df["rep"])
     if len(x) < 2 or len(y) < 2:
         return np.nan, 0
     try:
@@ -96,7 +103,7 @@ if __name__ == '__main__':
     last_exp_dir = get_last_experiment_dir(ename)
     all_files = os.listdir(last_exp_dir)
     cache_dir = create_cache_dir_if_needed(last_exp_dir)
-    if os.path.exists(os .path.join(cache_dir, "cached.csv")):
+    if os.path.exists(os.path.join(cache_dir, "cached.csv")):
         print("Use cache")
         result_df = pd.read_csv(os.path.join(cache_dir, "cached.csv"))
     else:
@@ -104,6 +111,8 @@ if __name__ == '__main__':
         j = 0
         for file in tqdm(all_files):
             j += 1
+            if not file.endswith(".csv"):
+                continue
             df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",").convert_dtypes()
             df = fill_df(df)
             approach = np.unique(df["approach"])[0]
@@ -131,25 +140,28 @@ if __name__ == '__main__':
                 prec = precision(tp, fp, fn)
                 rec = recall(tp, fp, fn)
                 f1 = fb_score(true_cps, reported_cps, T=cp_distance)
-                jac, region_prec, region_rec = compute_region_metrics(rep_data, thresh=2.5)
+                jac, region_prec, region_rec, acc = compute_region_metrics(rep_data, thresh=2.5)
                 f1_region = 2 * (region_rec * region_prec) / (region_rec + region_prec)
                 result_df.append([
-                    rep, dataset, dims, approach, params, E, eta, f1_region, region_prec, region_rec, jac, np.nan, np.nan, f1
+                    rep, dataset, dims, approach, params, E, eta, f1_region, region_prec, region_rec, jac, np.nan, np.nan, f1, acc
                 ])
         result_df = pd.DataFrame(result_df, columns=["Rep", "Dataset", "Dims", "Approach", "Parameters", "E", "eta", "F1 (Subspace)", "Prec. (Region)",
-                                                     "Rec. (Region)", "Jaccard", "Pearson R", "Weight", "F1"])
-        result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
-    # result_df.groupby(["Dataset", "Approach", "Dims"])["Pearson R"].fillna(method="ffill", inplace=True)
+                                                     "Rec. (Region)", "Jaccard", r"Spearman $\rho$", "Weight", "F1", "SAcc."])
+        result_df.to_csv(os.path.join(cache_dir, "cached.csv"), mode="w+", index=False)
+    # result_df.groupby(["Dataset", "Approach", "Dims"])[r"Spearman $\rho$"].fillna(method="ffill", inplace=True)
+    if "Pearson R" in result_df.columns:
+        result_df.rename({r"Spearman $\rho$": r"Spearman $\rho$"}, axis=1, inplace=True)
+        result_df.to_csv(os.path.join(cache_dir, "cached.csv"), mode="w+", index=False)
     result_df = result_df[result_df["Dataset"] != "RBF"]
     for _, gdf in result_df.groupby(["Approach", "Dataset", "Dims"]):
         index = gdf.index
-        gdf = gdf["Pearson R"].fillna(method="ffill")
-        result_df["Pearson R"].loc[index] = gdf
+        gdf = gdf[r"Spearman $\rho$"].fillna(method="ffill")
+        result_df[r"Spearman $\rho$"].loc[index] = gdf
     result_df = result_df.groupby(["Dataset", "Approach", "Parameters", "Dims"]).mean().reset_index()
     # med_dfs = []
     # for _, gdf in result_df.groupby(["Dataset", "Approach", "Dims"]):
     #     med_f1 = gdf["F1"].median()
-    #     gdf["Pearson R"][gdf["F1"] < med_f1] = np.nan
+    #     gdf[r"Spearman $\rho$"][gdf["F1"] < med_f1] = np.nan
     #     gdf["Jaccard"][gdf["F1"] < med_f1] = np.nan
     #     med_dfs.append(gdf)
     # result_df = pd.concat(med_dfs)
@@ -157,13 +169,14 @@ if __name__ == '__main__':
     result_df = result_df.sort_values(by=sort_by)
     result_df["F1 (Subspace)"][result_df["F1 (Subspace)"].isna()] = 0
     result_df["Jaccard"][result_df["Jaccard"].isna()] = 0
-    result_df["Pearson R"][result_df["Pearson R"].isna()] = 0
+    result_df[r"Spearman $\rho$"][result_df[r"Spearman $\rho$"].isna()] = 0
+    result_df["SAcc."][result_df["SAcc."].isna()] = 0
     print(result_df.groupby(["Approach"]).mean().reset_index().round(
-        decimals={"F1 (Subspace)": 2, "Prec. (Region)": 2, "Rec. (Region)": 2, "Jaccard": 2, "Pearson R": 2}
+        decimals={"F1 (Subspace)": 2, "Prec. (Region)": 2, "Rec. (Region)": 2, "Jaccard": 2, r"Spearman $\rho$": 2}
     ).reset_index().to_markdown())
     result_df = result_df.sort_values(by=["Dims", "Dataset"])
     result_df = result_df.astype(dtype={"Dims": str})
-    result_df["Pearson R"][result_df["Approach"] == "D3"] = result_df[result_df["Approach"] == "D3"]["Pearson R"]
+    result_df[r"Spearman $\rho$"][result_df["Approach"] == "D3"] = result_df[result_df["Approach"] == "D3"][r"Spearman $\rho$"]
     result_df = result_df[result_df["Dataset"] != "Average"]
     result_df["Approach"][result_df["Approach"] == "ABCD0 (ae)"] = "ABCD (ae)"
     result_df["Approach"][result_df["Approach"] == "ABCD0 (pca)"] = "ABCD (pca)"
@@ -173,7 +186,7 @@ if __name__ == '__main__':
     n_colors = len(np.unique(result_df["Approach"]))
     palette = sns.cubehelix_palette(n_colors=n_colors)
     melted_df = pd.melt(result_df, id_vars=["Dataset", "Approach", "Parameters", "E", "eta", "Dims"],
-                        value_vars=["F1", "Jaccard", "Pearson R"],
+                        value_vars=["F1", "SAcc.", r"Spearman $\rho$"],
                         var_name="Metric", value_name="Value")
     melted_df = melted_df[melted_df["Value"].isna() == False]
     melted_df[r"$\eta$"] = melted_df["eta"]
@@ -183,12 +196,17 @@ if __name__ == '__main__':
     g.set(xlabel=None)
     for i, ax in enumerate(plt.gcf().axes):
         ax.set_xticks(ax.get_xticks())
-        ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        ax.axhline(0.0, color="gray", lw=0.7, ls="--", zorder=0)
+        ax.axhline(0.25, color="gray", lw=0.7, ls="--", zorder=0)
+        ax.axhline(0.5, color="gray", lw=0.7, ls="--", zorder=0)
+        ax.axhline(0.75, color="gray", lw=0.7, ls="--", zorder=0)
+        ax.axhline(1.0, color="gray", lw=0.7, ls="--", zorder=0)
         if i == 0:
             ax.set_ylabel("F1")
         if i == 4:
-            ax.set_ylabel("Jaccard")
+            ax.set_ylabel("SAcc.")
         if i == 8:
             ax.set_ylabel(r"Spearman $\rho$")
         if i < 4:
@@ -199,9 +217,10 @@ if __name__ == '__main__':
             ax.set_title(col_title)
         else:
             ax.set_title("")
-    plt.gcf().set_size_inches(3.5 * 2.5 / 2, 3.5 * 1.5)
-    plt.tight_layout()
-    plt.subplots_adjust(left=0.12, wspace=0.1, right=0.99)
+    plt.gcf().set_size_inches(cm2inch(16, 9))
+    plt.tight_layout(pad=.5)
+    plt.subplots_adjust(wspace=.1)
+    # plt.subplots_adjust(left=0.12, wspace=0.1, right=0.99)
     plt.savefig(os.path.join("..", "figures", "evaluation_drift_region.pdf"))
     plt.show()
 
@@ -225,7 +244,7 @@ if __name__ == '__main__':
         if col_title.startswith("Normal"):
             a, b = col_title.split("al")
             col_title = a + "." + b
-        if col_title == "Pearson R":
+        if col_title == r"Spearman $\rho$":
             col_title = r"Spearman $\rho$"
         ax.set_title(col_title)
     plt.xticks(rotation=45, ha='right')
@@ -248,32 +267,36 @@ if __name__ == '__main__':
     abcd_eta = abcd.copy()
     average = abcd_eta.copy()  # .groupby(["Approach", r"$\eta$"]).mean().reset_index()
     average["Dataset"] = "Average"
-    abcd_eta = abcd.sort_values(by="Dims")
+    abcd_eta = abcd_eta.sort_values(by=["Dims", "Metric"])
     abcd_eta = pd.concat([average, abcd_eta], axis=0)
     # abcd[r"$E$"] = abcd[r"$E$"].astype(int)
     g = sns.catplot(x=r"$\eta$", col="Dataset", y="Value", row="Metric", hue="Approach", errwidth=1,
                     data=abcd_eta, kind="bar", palette=sns.color_palette("Dark2"),
-                    height=1 * 8 / 6, aspect=.6, sharey="row")
+                    height=cm2inch(3.2)[0], aspect=0.9, sharey="row")
     axes = plt.gcf().axes
     plt.gcf().subplots_adjust(left=0.08)
     for i, ax in enumerate(axes):
         if i == 0:
-            ax.set_ylabel("Jaccard")
+            ax.set_ylabel("SAcc.")
         if i == 5:
             ax.set_ylabel(r"Spearman $\rho$")
-        # ax.set_ylim(0.4, 1.0)
-        ax.set_ylim(bottom=0.0 if i < 5 else 0)
-        # if i > 4:
-        #     ax.set_ylim(top=.7)
         current_title = ax.get_title()
         dataset = current_title.split(" = ")[-1]
         if "Norm" in dataset:
             dataset = "Norm.-" + dataset.split("-")[-1]
         ax.set_title(dataset)
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        if i > 4:
+        if i < 5:
+            ax.axhline(0.5, lw=0.7, ls="--", color="gray", zorder=0)
+            ax.axhline(1.0, lw=0.7, ls="--", color="gray", zorder=0)
+        if i >= 5:
             ax.set_title("")
+            ax.axhline(0.25, lw=0.7, ls="--", color="gray", zorder=0)
+            ax.axhline(.5, lw=0.7, ls="--", color="gray", zorder=0)
+            # ax.axhline(0.75, lw=0.7, ls="--", color="gray")
+            # ax.axhline(1, lw=0.7, ls="--", color="gray")
+            ax.set_ylim(bottom=0.0 if i < 5 else 0)
     plt.tight_layout(pad=0.5)
-    plt.subplots_adjust(right=0.8)
+    plt.subplots_adjust(right=0.85)
     plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-eta-region-severity.pdf"))
     plt.show()
