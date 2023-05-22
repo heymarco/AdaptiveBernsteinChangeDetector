@@ -43,14 +43,26 @@ def new_filepath_in_experiment_with_name(name: str) -> str:
     if not os.path.exists(this_exp_dir):
         os.mkdir(this_exp_dir)
     exps = os.listdir(this_exp_dir)
-    exps = [int(e) for e in exps]
-    current_dir = str(np.sort(exps)[-1])
+    int_exps = []
+    for e in exps:
+        try:
+            int_exps.append(int(e))
+        except:
+            pass
+    current_dir = str(np.sort(int_exps)[-1])
     dfs = os.listdir(os.path.join(this_exp_dir, current_dir))
     if len(dfs) == 0:
         new_df = "1.csv"
     else:
-        ids = [int(os.path.splitext(csv)[0]) for csv in dfs]
-        current_index = np.sort(ids)[-1]  # I think this can lead to a race condition if we execute parallel.
+        ids = [os.path.splitext(csv)[0] for csv in dfs]
+        int_ids = []
+        for id in ids:
+            try:
+                int_id = int(id)
+                int_ids.append(int_id)
+            except:
+                pass
+        current_index = np.sort(int_ids)[-1]  # I think this can lead to a race condition if we execute parallel.
         new_df = str(current_index + 1) + ".csv"
     return os.path.join(this_exp_dir, current_dir, new_df)
 

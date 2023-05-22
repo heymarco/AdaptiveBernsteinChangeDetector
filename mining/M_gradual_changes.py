@@ -335,4 +335,4 @@ if __name__ == '__main__':
     compare(print_summary=True,
             plot_E_sensitivity_study=False,
             plot_eta_sensitivity_study=False,
-            plot_gradual_changes_comparison=False)
+            plot_gradual_changes_comparison=True)

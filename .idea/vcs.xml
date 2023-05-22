@@ -2,12 +2,8 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/mining/src/change-detectors" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/src/change-detectors" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/src/change-detectors/src/change-detectors" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/src/stream-datasets" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/src/stream-datasets/concept-drift-datasets-scikit-multiflow" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/src/stream-datasets/src/change-detectors" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/src/streamdatasets" vcs="Git" />
   </component>
 </project>
