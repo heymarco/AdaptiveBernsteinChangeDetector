@@ -1,6 +1,6 @@
 # Adaptive Bernstein Change Detector for High-Dimensional Data Streams 
 
-This repository contains code for the paper "Adaptive Bernstein Change Detector for High-Dimensional Data Streams".
+This repository contains code for the paper "Adaptive Bernstein Change Detector for High-Dimensional Data Streams" ([https://arxiv.org/abs/2306.12974](https://arxiv.org/abs/2306.12974)).
 
 ## Installation of dependencies
 
