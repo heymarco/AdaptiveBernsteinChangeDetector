@@ -15,6 +15,8 @@ from E_synthetic_data import ename
 from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, \
     get_abcd_hyperparameters_from_str, cm2inch
 
+sns.set_theme(context="paper", style="ticks", palette="deep")
+
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
 mpl.rcParams['text.latex.preamble'] = r'\usepackage{times}'
@@ -184,7 +186,6 @@ if __name__ == '__main__':
     result_df = result_df.fillna(0.0)
     result_df = result_df.sort_values(by="Approach")
     n_colors = len(np.unique(result_df["Approach"]))
-    palette = sns.cubehelix_palette(n_colors=n_colors)
     melted_df = pd.melt(result_df, id_vars=["Dataset", "Approach", "Parameters", "E", "eta", "Dims"],
                         value_vars=["F1", "SAcc.", r"Spearman $\rho$"],
                         var_name="Metric", value_name="Value")
@@ -192,7 +193,7 @@ if __name__ == '__main__':
     melted_df[r"$\eta$"] = melted_df["eta"]
     g = sns.catplot(data=melted_df, x="Approach", y="Value", col="Dataset", row="Metric", kind="box",
                     linewidth=0.7, fliersize=2, sharey="row", showfliers=False,
-                    palette=sns.color_palette("Dark2"))
+                    )
     g.set(xlabel=None)
     for i, ax in enumerate(plt.gcf().axes):
         ax.set_xticks(ax.get_xticks())
@@ -217,7 +218,7 @@ if __name__ == '__main__':
             ax.set_title(col_title)
         else:
             ax.set_title("")
-    plt.gcf().set_size_inches(cm2inch(16, 9))
+    plt.gcf().set_size_inches(cm2inch(16, 7.5))
     plt.tight_layout(pad=.5)
     plt.subplots_adjust(wspace=.1)
     # plt.subplots_adjust(left=0.12, wspace=0.1, right=0.99)
@@ -227,7 +228,7 @@ if __name__ == '__main__':
     g = sns.catplot(data=melted_df[melted_df["Approach"] != "Average"],
                     x="Approach", y="Value", row="Metric", kind="box",
                     linewidth=0.7, fliersize=2, sharey="row", showfliers=False,
-                    palette=sns.color_palette("Dark2"))
+                    )
     g.set(xlabel=None)
     for i, ax in enumerate(plt.gcf().axes):
         ax.set_xticks(ax.get_xticks())
@@ -247,10 +248,10 @@ if __name__ == '__main__':
         if col_title == r"Spearman $\rho$":
             col_title = r"Spearman $\rho$"
         ax.set_title(col_title)
-    plt.xticks(rotation=45, ha='right')
-    plt.gcf().set_size_inches(3.8, 4.7)
-    plt.tight_layout()
-    plt.subplots_adjust(left=0.15, wspace=0.1, right=0.98)
+    plt.xticks(rotation=25, ha='right')
+    plt.gcf().set_size_inches(3.3, 3.3)
+    plt.tight_layout(pad=.5)
+    plt.subplots_adjust(left=0.15, wspace=0.1, hspace=0.5, right=0.98)
     plt.savefig(os.path.join("..", "figures", "evaluation_drift_region_presentation.pdf"))
     plt.show()
 
@@ -271,8 +272,9 @@ if __name__ == '__main__':
     abcd_eta = pd.concat([average, abcd_eta], axis=0)
     # abcd[r"$E$"] = abcd[r"$E$"].astype(int)
     g = sns.catplot(x=r"$\eta$", col="Dataset", y="Value", row="Metric", hue="Approach", errwidth=1,
-                    data=abcd_eta, kind="bar", palette=sns.color_palette("Dark2"),
-                    height=cm2inch(3.2)[0], aspect=0.9, sharey="row")
+                    data=abcd_eta, kind="bar",
+                    legend=False,
+                    height=cm2inch(2.5)[0], aspect=1.5, sharey="row")
     axes = plt.gcf().axes
     plt.gcf().subplots_adjust(left=0.08)
     for i, ax in enumerate(axes):
@@ -297,6 +299,5 @@ if __name__ == '__main__':
             # ax.axhline(1, lw=0.7, ls="--", color="gray")
             ax.set_ylim(bottom=0.0 if i < 5 else 0)
     plt.tight_layout(pad=0.5)
-    plt.subplots_adjust(right=0.85)
     plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-eta-region-severity.pdf"))
     plt.show()

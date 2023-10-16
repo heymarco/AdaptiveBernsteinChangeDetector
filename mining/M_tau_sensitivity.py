@@ -12,6 +12,8 @@ from E_synthetic_data import ename
 from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_if_needed, \
     get_abcd_hyperparameters_from_str, cm2inch, move_legend_below_graph
 
+sns.set_theme(context="paper", style="ticks", palette="deep")
+
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
 mpl.rcParams['text.latex.preamble'] = r'\usepackage{times}'
@@ -25,10 +27,12 @@ if __name__ == '__main__':
     result_df = []
     j = 0
     cache_dir = create_cache_dir_if_needed(last_exp_dir)
-    if os.path.exists(os.path.join(cache_dir, "cached-p-values.csv")):
+    p_values_exist = os.path.exists(os.path.join(cache_dir, "cached-p-values.csv"))
+    tau_exists = os.path.exists(os.path.join(cache_dir, "cached_tau_results.csv"))
+    if p_values_exist and not tau_exists:
         print("Use cache")
         result_df = pd.read_csv(os.path.join(cache_dir, "cached-p-values.csv"))
-    else:
+    if not p_values_exist:
         for file in tqdm(all_files):
             j += 1
             # if j > 10:
@@ -61,11 +65,11 @@ if __name__ == '__main__':
         result_df = pd.DataFrame(data=result_df, columns=["dataset", "delta", "E", "eta", "rep", "dims", "dim", "params",
                                                           "approach", "has changed", "p-value"])
         result_df.to_csv(os.path.join(cache_dir, "cached-p-values.csv"), index=False)
+        result = []
+        groupby = ["dataset", "approach", "params", "rep"]
+        result_df = result_df[result_df["dataset"] != "RBF"]
 
-    result = []
-    groupby = ["dataset", "approach", "params", "rep"]
-    result_df = result_df[result_df["dataset"] != "RBF"]
-    if os.path.exists(os.path.join(cache_dir, "cached_tau_results.csv")):
+    if tau_exists:
         result = pd.read_csv(os.path.join(cache_dir, "cached_tau_results.csv"))
     else:
         steps = 40
@@ -100,7 +104,6 @@ if __name__ == '__main__':
     result = pd.concat([result, avg_df]).reset_index()
     result = result.sort_values(by=["dataset"], ascending=False)
     n_colors = len(np.unique(result["dataset"]))
-    sns.set_palette(sns.color_palette("Dark2"))
     # result = result.melt(id_vars=["dataset", "approach", "params", "rep", r"$\tau$"],
     #                      value_vars=["Jaccard", "Prec.", "Rec.", "F1"],
     #                      var_name="Metric", value_name="Score")
@@ -109,7 +112,7 @@ if __name__ == '__main__':
     result = result.sort_values(by="approach").sort_values(by="dataset", ascending=False)
     g = sns.relplot(data=result, x=r"$\tau$", y="Accuracy", hue="dataset",
                     col="approach",
-                    height=cm2inch(4)[0], aspect=1.2,
+                    height=cm2inch(3.5)[0], aspect=1.4,
                     kind="line", legend=False, ci=False)
     # plt.gcf().set_size_inches(cm2inch((16, 4)))
     # max_vals = result.groupby(["approach", r"$\tau$"]).mean().max().reset_index
@@ -117,6 +120,9 @@ if __name__ == '__main__':
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         col_title = ax.get_title().split(" = ")[-1]
         col_title = col_title.split("0")[0] + col_title.split("0")[1]
+        col_title = col_title.split("(")[-1][:-1].upper()
+        if col_title == "KPCA":
+            col_title = "Kernel-PCA"
         ax.set_title(col_title)
         # max_tau = max_vals[max_vals["Approach"] == col_title].iloc[0][r"$\tau$"]
         ax.axhline(0.25, color="gray", lw=0.7, ls="--", zorder=0)

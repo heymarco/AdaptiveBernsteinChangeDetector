@@ -12,6 +12,7 @@ from util import get_last_experiment_dir, str_to_arr, fill_df, create_cache_dir_
     get_abcd_hyperparameters_from_str, change_bar_width, cm2inch
 from E_gradual_changes import ename
 
+sns.set_theme(context="paper", style="ticks", palette="deep")
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
 mpl.rcParams['text.latex.preamble'] = r'\usepackage{times}'
@@ -97,18 +98,25 @@ def compare(print_summary: bool,
                 MTD = mean_until_detection(true_cps, reported_cps)
                 mae_delay = mean_cp_detection_time_error(true_cps, reported_cps,
                                                          delays) if "ABCD" in approach else np.nan
-                mtpe = mean_time_per_example(rep_data)
-                mtpe = mtpe / 10e6
+                # mtpe = mean_time_per_example(rep_data)
+                # mtpe = mtpe / 10e6
                 result_df.append([
                     dataset, dims, approach, params, rep, f1, f05, f2, prec, rec,
-                    MTD, mtpe, n_seen_changes, mae_delay
+                    MTD,
+                    # mtpe,
+                    n_seen_changes, mae_delay
                 ])
         result_df = pd.DataFrame(result_df, columns=["Dataset", "Dims", "Approach", "Parameters", "rep", "F1", "F0.5",
                                                      "F2", "Prec.", "Rec.", "MTD",
-                                                     "MTPO [ms]", "PC", "CP-MAE"])
+                                                     # "MTPO [ms]",
+                                                     "PC", "CP-MAE"])
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), index=False)
-    result_df = result_df[["Dataset", "Dims", "Approach", "Parameters", "F0.5", "F1", "F2", "Prec.", "Rec.",
-                           "MTD", "MTPO [ms]"]]
+    result_df = result_df[
+        ["Dataset", "Dims", "Approach", "Parameters",
+         "F0.5", "F1", "F2", "Prec.", "Rec.",
+         "MTD"
+        # , "MTPO [ms]"
+    ]]
     if print_summary:
         summary = result_df.copy().groupby(["Dataset", "Approach", "Parameters"]).mean().reset_index()
         summary = filter_best(summary, worst=False, median=True)
@@ -122,10 +130,18 @@ def compare(print_summary: bool,
 
     if print_summary:
         summary = summary.round(decimals={
-            "F1": 2, "F0.5": 2, "F2": 2, "Prec.": 2, "Rec.": 2, "MTPO [ms]": 3, "MTD": 1
+            "F1": 2,
+            "F0.5": 2,
+            "F2": 2,
+            "Prec.": 2,
+            "Rec.": 2,
+            # "MTPO [ms]": 3,
+            "MTD": 1
         })
         summary = summary.sort_values(by=sort_by)
-        summary.drop(["Parameters", "Dims", "MTPO [ms]", "F0.5", "F2"], axis=1, inplace=True)
+        summary.drop(["Parameters", "Dims",
+                      # "MTPO [ms]",
+                      "F0.5", "F2"], axis=1, inplace=True)
         print(summary.set_index(["Dataset", "Approach"]).to_latex(escape=False))
     abcd = np.logical_or(result_df["Approach"] == "ABCD (ae)",
                           result_df["Approach"] == "ABCD (pca)")
@@ -165,10 +181,10 @@ def compare(print_summary: bool,
         del avg_df
 
     if plot_eta_sensitivity_study:
-        g = sns.catplot(x=r"$\eta$", y="F1", col="Dataset", hue="Approach", errwidth=1, col_wrap=4,
-                        data=abcd_eta, kind="bar", palette=sns.color_palette("Dark2"),
-                        height=cm2inch(3)[0], aspect=3.2/4, sharex=False)
-        axes = g.axes
+        g = sns.catplot(x=r"$\eta$", y="F1", col="Dataset", hue="Approach", errwidth=1,
+                        data=abcd_eta, kind="bar",
+                        height=cm2inch(5)[0], aspect=0.4, sharex=False)
+        axes = g.axes.flatten()
         for i, ax in enumerate(axes):
             ax.axhline(0.25, lw=0.7, ls="--", color="gray", zorder=0)
             ax.axhline(0.75, lw=0.7, ls="--", color="gray", zorder=0)
@@ -182,10 +198,10 @@ def compare(print_summary: bool,
             else:
                 ax.set_title("")
             ax.set_xticks(ax.get_xticks(), [])
-            if i >= 4:
-                ax.set_xticklabels([0.3, 0.5, 0.7])
+            ax.set_xticklabels([0.3, 0.5, 0.7])
+        sns.move_legend(g, "upper center", ncol=3, title=None, frameon=False)
         plt.tight_layout(pad=0.5)
-        plt.gcf().subplots_adjust(right=0.8)
+        plt.subplots_adjust(top=0.66)
         plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-eta.pdf"))
         plt.show()
 
@@ -198,7 +214,6 @@ def compare(print_summary: bool,
         abcd_E = pd.concat([average, abcd_E], axis=0)
         n_colors = len(np.unique(abcd_E["E"]))
         ax = sns.barplot(x="Dataset", y="F1", hue="E", data=abcd_E, palette=sns.cubehelix_palette(n_colors=n_colors), errwidth=1)
-        # ax.set_xticklabels(ax.get_xticklabels(), rotation=30, ha='right')
         ax.set_xlabel("")
         ax.axhline(0.5, color="gray", lw=0.7, ls="--", zorder=0)
         ax.axhline(0.75, color="gray", lw=0.7, ls="--", zorder=0)
@@ -206,7 +221,7 @@ def compare(print_summary: bool,
         ax.set_ylim(bottom=.3)
         ax.legend(title=r"$E$", loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
         change_bar_width(ax, .23)
-        plt.gcf().set_size_inches(cm2inch(16, 3))
+        plt.gcf().set_size_inches(cm2inch(16, 2.5))
         plt.tight_layout(pad=.5)
         plt.subplots_adjust(right=0.85)
         plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-E.pdf"))
@@ -223,7 +238,7 @@ def compare(print_summary: bool,
                             var_name="Metric", value_name="Value")
         melted_df = melted_df[melted_df["Value"].isna() == False]
         g = sns.catplot(data=melted_df, x="Approach", y="Value", col="Dataset", row="Metric", kind="box",
-                        linewidth=0.7, fliersize=2, sharey="row", palette=sns.color_palette("Dark2")
+                        linewidth=0.7, fliersize=2, sharey="row",
                         )
         g.set(xlabel=None)
         for i, ax in enumerate(plt.gcf().axes):
@@ -251,7 +266,7 @@ def compare(print_summary: bool,
                 ax.axhline(0.5, color="gray", lw=0.7, ls="--", zorder=0)
                 ax.axhline(0.75, color="gray", lw=0.7, ls="--", zorder=0)
                 ax.axhline(1.0, color="gray", lw=0.7, ls="--", zorder=0)
-        plt.gcf().set_size_inches(3.5 * 2.5, 3.5 * 2)
+        plt.gcf().set_size_inches(3.5 * 2.5, 3.5 * 1.5)
         plt.tight_layout()
         plt.subplots_adjust(wspace=0.05)
         plt.savefig(os.path.join("..", "figures", "evaluation_gradual_changes.pdf"))
@@ -259,7 +274,7 @@ def compare(print_summary: bool,
 
         g = sns.catplot(data=melted_df[melted_df["Approach"] != "Average"],
                         x="Approach", y="Value", row="Metric", kind="box",
-                        linewidth=0.7, fliersize=2, sharey="row", palette=sns.color_palette("Dark2")
+                        linewidth=0.7, showfliers=False, sharey="row",
                         )
         g.set(xlabel=None)
         for i, ax in enumerate(plt.gcf().axes):
@@ -273,10 +288,10 @@ def compare(print_summary: bool,
                 col_title = a + "." + b
             ax.set_title(col_title)
             ax.set_ylabel("")  # (value_vars[i])
-        plt.xticks(rotation=45, ha='right')
-        plt.gcf().set_size_inches(3.8, 4.7)
-        plt.tight_layout()
-        plt.subplots_adjust(wspace=0.05)
+        plt.xticks(rotation=25, ha='right')
+        plt.gcf().set_size_inches(3.3, 3.3)
+        plt.tight_layout(pad=.2)
+        plt.subplots_adjust(wspace=0.05, hspace=.7)
         plt.savefig(os.path.join("..", "figures", "evaluation_gradual_changes_presentation.pdf"))
         plt.show()
 
@@ -332,7 +347,7 @@ def filter_best(df, worst: bool, median: bool, add_mean: bool = True):
 
 
 if __name__ == '__main__':
-    compare(print_summary=True,
-            plot_E_sensitivity_study=False,
-            plot_eta_sensitivity_study=False,
+    compare(print_summary=False,
+            plot_E_sensitivity_study=True,
+            plot_eta_sensitivity_study=True,
             plot_gradual_changes_comparison=True)

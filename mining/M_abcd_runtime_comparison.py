@@ -51,9 +51,9 @@ if __name__ == '__main__':
                 eta = np.nan
                 n_splits = np.nan
             reported_cps = [i for i in rep_data.index if rep_data["change-point"].loc[i]]
-            if len(reported_cps) > 0:
-                print("Number of changes is {}".format(len(reported_cps)))
-                continue
+            # if len(reported_cps) > 0:
+            #     print("Number of changes is {}".format(len(reported_cps)))
+            #     continue
             rep_data[r"$t$"] = range(len(rep_data))
             rep_data[r"$\eta$"] = eta
             rep_data["time"] = rep_data["time"] - rep_data["time"].iloc[0]
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     result_df = result_df.sort_values(by=["Approach", "ndims"])
     result_df["ndims"] = result_df.ndims.apply(lambda x: r"${}$".format(int(x)))
     n_colors = len(np.unique(result_df["Approach"]))
-    mpl.rcParams['figure.figsize'] = cm2inch(12, 5)
+    # mpl.rcParams['figure.figsize'] = cm2inch(12, 5.7)
     # g = sns.catplot(data=result_df, y="Approach", x="MTPO [ms]", palette=sns.cubehelix_palette(n_colors),
     #                 col="ndims", kind="bar", orient="h", height=2)
     result_df[r"$d$"] = result_df["ndims"]
@@ -96,9 +96,8 @@ if __name__ == '__main__':
                     hue=r"$d$",
                     errwidth=1,
                     palette=sns.cubehelix_palette(4),
-                    height=cm2inch(5)[0],
-                    aspect=12 / 5,
-                    # showfliers=False,
+                    height=cm2inch(4.2)[0],
+                    aspect=14 / 4.2,
                     orient="h")
     # ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
     g.axes.flatten()[0].axvline(10 ** -2, color="gray", lw=0.7, ls="--", zorder=0)
@@ -115,7 +114,7 @@ if __name__ == '__main__':
     # g.set(xscale="log")
     # g.set(ylabel="")
     plt.tight_layout(pad=.5)
-    plt.gcf().subplots_adjust(right=.8)
+    plt.gcf().subplots_adjust(right=.85)
     plt.savefig(os.path.join(os.getcwd(), "..", "figures", "mtpo.pdf"))
     plt.show()
 
@@ -129,6 +128,7 @@ if __name__ == '__main__':
                     hue=r"$d$", style="Approach", kind="line",
                     height=1.75, aspect=0.8 * 5 / 3, palette=sns.cubehelix_palette(n_colors=4)[1:])
     # plt.yscale("log")
+    sns.move_legend(g, loc="upper right")
     axes = plt.gcf().axes
     plt.gcf().subplots_adjust(left=0.08)
     for i, ax in enumerate(axes):
@@ -151,5 +151,5 @@ if __name__ == '__main__':
     # plt.xscale("log")
     plt.tight_layout(pad=.5)
     plt.subplots_adjust(right=0.8)  # top=0.95, bottom=0.1, left=0.1,
-    plt.savefig(os.path.join("..", "figures", "runtime.pdf"))
+    plt.savefig(os.path.join("..", "figures", "mtpo_single_column.pdf"))
     plt.show()

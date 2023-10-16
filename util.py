@@ -114,9 +114,11 @@ def run_async(function, args_list, njobs, sleep_time_s=0.1):
 def fill_df(df: pd.DataFrame) -> pd.DataFrame:
     df.fillna(value={"is-change": False,
                      "change-point": False,
+                     "in-pre-train": False,
                      "severity": 0.0  # changes that were not detected are of 0 severity
                      }, inplace=True)
     df.ffill(inplace=True)
+    df.bfill(inplace=True)
     return df
 
 

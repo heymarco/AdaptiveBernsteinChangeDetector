@@ -5,7 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src/stream-datasets" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/mining/src/change-detectors" isTestSource="false" />
     </content>
-    <orderEntry type="jdk" jdkName="HoeffdingChangeDetector" jdkType="Python SDK" />
+    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

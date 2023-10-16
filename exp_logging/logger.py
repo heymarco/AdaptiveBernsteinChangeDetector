@@ -11,7 +11,7 @@ class ExperimentLogger:
     def __init__(self,
                  columns: list = ["rep", "approach", "parameters", "dataset", "time", "metric", "p", "change-point",
                                   "is-change", "delay", "ndims", "dims-gt", "dims-found", "dims-p",
-                                  "drift-type", "drift-length", "severity-gt", "severity"]):
+                                  "drift-type", "drift-length", "severity-gt", "severity", "in-pre-train"]):
         self._data = []
         self._columns = columns
         self._current_row = [np.nan for _ in range(len(self._columns))]
@@ -25,6 +25,9 @@ class ExperimentLogger:
 
     def track_dataset_name(self, name):
         self._track_value(name, "dataset")
+
+    def track_in_pre_train(self, value):
+        self._track_value(value, "in-pre-train")
 
     def track_time(self):
         current_time = time.perf_counter_ns()

@@ -83,7 +83,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
     def pre_train(self, data):
         if self.model is None:
             self.model = self.model_class(input_size=data.shape[-1], eta=self.eta)
-        self.model.update(data, epochs=self.epochs)
+        self.model.update(data, epochs=self.epochs, logger=self.logger)
 
     def add_element(self, input_value):
         """
@@ -98,7 +98,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.window.grow(new_tuple)  # add new tuple to window
         self._last_loss = self.window.most_recent_loss()
         self.in_concept_change, detection_point = self.window.has_change()
-        # self.logger.track_change_point(self.in_concept_change)
+        self.logger.track_change_point(self.in_concept_change)
         if self.in_concept_change:
             self._evaluate_subspace()
             self._evaluate_magnitude()
@@ -107,7 +107,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
             self.last_detection_point = detection_point
             self.delay = len(self.window) - self.window.t_star
             self.last_change_point = self.last_detection_point - self.delay
-            # self.logger.track_delay(self.delay)
+            self.logger.track_delay(self.delay)
 
             self.model = None  # Remove outdated model
             self.pre_train(self.window.data_new())  # New model after change

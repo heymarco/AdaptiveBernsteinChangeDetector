@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC
 from typing import Protocol, Any, Tuple
 
@@ -7,15 +9,16 @@ import torch.nn.functional as F
 import torch.optim
 from sklearn.decomposition import PCA, KernelPCA
 
-from exp_logging.logger import logger
+from exp_logging.logger import logger, ExperimentLogger
 
 
 class EncoderDecoder(Protocol):
-    def update(self, window, epochs: int):
+    def update(self, window, epochs: int, logger: ExperimentLogger | None = None):
         """
         Update the model
         :param window: the data [n_samples, n_features]
         :param epochs: The number of training epochs
+        :param logger: If a logger is provided, log the reconstruction loss during training
         :return: nothing
         """
 
@@ -54,11 +57,12 @@ class AutoEncoder(nn.Module, EncoderDecoder):
         x = torch.sigmoid(self.decoder(x))
         return x
 
-    def update(self, window, epochs: int = 1):
+    def update(self, window, epochs: int = 1, logger: ExperimentLogger | None = None):
         """
         Update the autoencoder on the given window
         :param window: The data
         :param epochs: The number of training epochs
+        :param logger: If a logger is provided, log the reconstruction loss during training
         :return:
         """
         if len(window) == 0:
@@ -71,6 +75,10 @@ class AutoEncoder(nn.Module, EncoderDecoder):
             loss = F.mse_loss(pred, tensor)
             loss.backward()
             self.optimizer.step()
+            if isinstance(logger, ExperimentLogger):
+                logger.track_feature_extraction(loss.item())
+                logger.track_in_pre_train(True)
+                logger.finalize_round()
 
     def new_tuple(self, x):
         """
@@ -83,6 +91,7 @@ class AutoEncoder(nn.Module, EncoderDecoder):
             pred = self.forward(tensor)
             loss = F.mse_loss(pred, tensor)
             logger.track_feature_extraction(loss.item())
+            logger.track_in_pre_train(False)
             return loss.item(), pred.numpy()[0], x[0]
 
 
@@ -92,7 +101,7 @@ class PCAModel(EncoderDecoder):
         self.eta = eta
         self.components = int(input_size * eta)
 
-    def update(self, window, epochs: int):
+    def update(self, window, epochs: int, logger: ExperimentLogger | None = None):
         # n_components must be between 0 and min(n_samples, n_features) with svd_solver='full'
         max_components = min(window.shape)
         components = min(self.components, max_components)
@@ -115,7 +124,7 @@ class KernelPCAModel(EncoderDecoder):
         self.kernel = kernel
         self.components = int(input_size * eta)
 
-    def update(self, window, epochs: int):
+    def update(self, window, epochs: int, logger: ExperimentLogger | None = None):
         self.pca = KernelPCA(n_components=self.components, kernel=self.kernel, fit_inverse_transform=True)
         self.pca.fit(window)
 

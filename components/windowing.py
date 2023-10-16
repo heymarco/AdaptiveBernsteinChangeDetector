@@ -144,6 +144,7 @@ class AdaptiveWindow:
         d = self._delta_bonferroni() if self.bonferroni else self.delta
         has_change = self.min_p_value < d
         self.t_star = self._cut_index()
+
         if has_change:
             return has_change, self.n_seen_items
         else:

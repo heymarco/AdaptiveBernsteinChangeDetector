@@ -54,7 +54,7 @@ class Experiment:
                parallel: bool = True, n_jobs: int = 1000):
         data_class, data_config = data
         if parallel:
-            njobs = min(self.reps, n_jobs, psutil.cpu_count() - 1)
+            njobs = min(n_jobs, psutil.cpu_count() - 1)
             args_list = []
             for rep in range(self.reps):
                 data_config["seed"] = rep
