@@ -45,12 +45,13 @@ class Experiment:
                 for algorithm in self.configurations.keys():
                     for config in self.configurations[algorithm]:
                         for rep in range(self.reps):
-                            alg = algorithm(**config)
                             args_list.append([
-                                alg,
-                                dataset_class(**ds_config),
+                                algorithm,
+                                config,
+                                dataset_class,
+                                ds_config,
                                 rep,
-                                warm_start
+                                warm_start,
                             ])
                         i += 1
         self._execute(args_list, parallel, n_jobs)
@@ -74,8 +75,11 @@ class Experiment:
             df = df.loc[bool_arr]
         df.to_csv(new_filepath_in_experiment_with_name(self.name), index=True)
 
-    def evaluate_algorithm(self, detector: DriftDetector, stream: ChangeStream,
+    def evaluate_algorithm(self, detector_class: DriftDetector, detector_config,
+                           stream_class: ChangeStream, stream_config,
                            rep: int, warm_start: int = 100) -> pd.DataFrame:
+        detector = detector_class(**detector_config)
+        stream = stream_class(**stream_config)
         logger = ExperimentLogger()
         if isinstance(detector, ABCD):
             detector.set_logger(logger)
@@ -130,4 +134,6 @@ class Experiment:
             if round_time - start_time > self.algorithm_timeout:
                 print("{} with {} on {} timed out!".format(detector.name(), detector.parameter_str(), stream.id()))
                 break
+        del logger
+
         return logger.get_dataframe()
