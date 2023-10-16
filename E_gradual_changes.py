@@ -57,7 +57,7 @@ if __name__ == '__main__':
     drift_length = 300
     dims = 100
     stretch = True
-    n_reps = 30
+    n_reps = 1
     datasets = {
         GradualHAR: [{"num_concepts": n_concepts, "drift_length": drift_length, "stretch": stretch,
                       "preprocess": preprocess}],
@@ -78,4 +78,4 @@ if __name__ == '__main__':
 
     experiment = Experiment(name=ename, configurations=algorithms, datasets=datasets,
                             reps=n_reps, condense_results=True, algorithm_timeout=10 * 60)
-    experiment.run(warm_start=100, parallel=False)
+    experiment.run(warm_start=100, parallel=True)

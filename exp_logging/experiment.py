@@ -39,35 +39,31 @@ class Experiment:
 
     def run(self, warm_start: int = 100, parallel: bool = True, n_jobs: int = 1000):
         i = 1
+        args_list = []
         for dataset_class in self.datasets.keys():
             for ds_config in self.datasets[dataset_class]:
                 for algorithm in self.configurations.keys():
                     for config in self.configurations[algorithm]:
-                        alg = algorithm(**config)
-                        print("{}/{}: Run {} with {} on {}".format(i, self.total_runs, alg.name(),
-                                                                   alg.parameter_str(), str(dataset_class)))
-                        self.repeat((algorithm, config), (dataset_class, ds_config), warm_start=warm_start,
-                                    parallel=parallel, n_jobs=n_jobs)
+                        for rep in range(self.reps):
+                            alg = algorithm(**config)
+                            args_list.append([
+                                alg,
+                                dataset_class(**ds_config),
+                                rep,
+                                warm_start
+                            ])
                         i += 1
+        self._execute(args_list, parallel, n_jobs)
 
-    def repeat(self, detector: Tuple, data: Tuple, warm_start: int = 100,
+    def _execute(self, args_list: list,
                parallel: bool = True, n_jobs: int = 1000):
-        data_class, data_config = data
         if parallel:
             njobs = min(n_jobs, psutil.cpu_count() - 1)
-            args_list = []
-            for rep in range(self.reps):
-                data_config["seed"] = rep
-                alg = detector[0](**detector[1])
-                stream = data_class(**data_config)
-                args_list.append([alg, stream, rep, warm_start])
             dfs = run_async(self.evaluate_algorithm, args_list=args_list, njobs=njobs)
         else:
             dfs = []
-            for rep in range(self.reps):
-                stream = data_class(**data_config)
-                alg = detector[0](**detector[1])
-                dfs.append(self.evaluate_algorithm(alg, stream, rep=rep, warm_start=warm_start))
+            for args in args_list:
+                dfs.append(self.evaluate_algorithm(*args))
         df = pd.concat(dfs, axis=0, ignore_index=True)
         if self.condense_results:
             empty_rep = df["rep"].isna() == False
