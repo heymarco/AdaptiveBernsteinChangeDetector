@@ -30,7 +30,8 @@ if __name__ == '__main__':
         df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",", index_col=0).convert_dtypes()
         df = fill_df(df)
         df["metric"] = df["metric"].rolling(30).mean()
-        df["Num Observations"] = np.arange(len(df))
+        df["Stream length"] = np.arange(len(df))
+        df = df[df.index < 5500]
         result_df.append(df)
     result_df = pd.concat(result_df, ignore_index=True)
     result_df[r"$|\mathcal{W}|$"] = np.nan
@@ -39,6 +40,7 @@ if __name__ == '__main__':
     result_df[r"$k_{max}$"] = ""
     result_df[r"$t$"] = np.nan
     result_df[r"$E$"] = 0
+    result_df = result_df.rename({"metric": "MSE"}, axis=1)
     for (rep, ndims, approach, params), rep_data in tqdm(
         result_df.groupby(["rep", "ndims", "approach", "parameters"])):
         E, eta = get_E_and_eta(params)
@@ -47,43 +49,61 @@ if __name__ == '__main__':
         result_df.loc[rep_data.index, r"$\eta$"] = eta
     # result_df[r"$|W|$"] = result_df[r"$|\mathcal{W}|$"]
     # result_df[r"$d$"] = result_df["ndims"].astype(int)
+    result_df = result_df.sort_values(by=[r"$E$"])
     result_df["Approach"] = result_df["approach"]
-    result_df["Approach"][result_df["Approach"] == "ABCD0 (pca)"] = "ABCD (pca)"
-    result_df["Approach"][result_df["Approach"] == "ABCD0 (ae)"] = "ABCD (ae)"
-    result_df["Approach"][result_df["Approach"] == "ABCD0 (kpca)"] = "ABCD (kpca)"
-    result_df["Approach"][result_df["Approach"] == "ABCD0 (dummy)"] = "ABCD (id)"
-    result_df = result_df.sort_values(by=["Approach", "dataset"])
-
-    result_df = result_df[result_df[r"$\eta$"] == 0.3]
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (pca)"] = "PCA"
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (ae)"] = "AE"
+    result_df["Approach"][result_df["Approach"] == "ABCD0 (kpca)"] = "KPCA"
+    is_ae = result_df["Approach"] == "AE"
+    result_df.loc[is_ae, "Approach"] = result_df["Approach"][is_ae] + result_df[r"$E$"][is_ae].apply(lambda x: f", $E={x}$")
+    result_df["order"] = 0
+    for i, (_, gdf) in enumerate(result_df.groupby("Approach")):
+        result_df.loc[gdf.index, "order"] = i
 
     grid = sns.relplot(
-        data=result_df, x="Num Observations", y="metric",
-        row="Approach", col="dataset", hue=r"$E$",
+        data=result_df, x="Stream length", y="MSE",
+        col="order", row="dataset", hue=r"$\eta$",
         kind="line",
         ci=None,
-        facet_kws={"sharex": False, "sharey": False},
-        zorder=1000
+        facet_kws={"sharex": "col", "sharey": "row", "legend_out": True},
+        zorder=100,
+        lw=0.5,
     )
 
     axes = grid.axes
-    for row, (_, row_data) in zip(axes, result_df.groupby("Approach")):
-        for ax, (_, ax_data) in zip(row, row_data.groupby("dataset")):
-            for _, row in ax_data[np.logical_and(ax_data[r"$E$"] == 50, ax_data["is-change"])].iterrows():
-                ax.axvline(row["Num Observations"], color="black", ls="dashed", lw=0.7, zorder=0)
-            for _, E_data in ax_data.groupby(r"$E$"):
-                palette = sns.cubehelix_palette(n_colors=81)
-                E = E_data[r"$E$"].iloc[0]
-                color = palette[E - 20]
-                lims = ax.get_ylim()
-                if np.any(E_data["in-pre-train"]):
-                    ax.fill_between(E_data["Num Observations"], -1, 1, where=E_data["in-pre-train"],
-                                    color="white", lw=0, zorder=100 - E)
-                    ax.fill_between(E_data["Num Observations"], -1, 1, where=E_data["in-pre-train"],
-                                    color=color, alpha=0.5, lw=0, zorder=101 - E)
-                    ax.set_ylim(lims)
+    for row_index, (row, (_, row_data)) in enumerate(zip(axes, result_df.groupby("dataset"))):
+        for col_index, (ax, (_, ax_data)) in enumerate(zip(row, row_data.groupby("Approach"))):
+            if col_index == 0:
+                ylabel_text = ax_data.iloc[0]["dataset"] + "\n" + ax.yaxis.get_label().get_text()
+                ax.set_ylabel(ylabel_text,
+                              multialignment="center")
+            for _, row in ax_data[np.logical_and(ax_data[r"$\eta$"] == 0.5, ax_data["is-change"])].iterrows():
+                if row_index == 0:
+                    ax.set_title(ax_data["Approach"].iloc[0])
                 else:
-                    for _, row in E_data[E_data["change-point"]].iterrows():
-                        ax.axvline(row["Num Observations"], color=color, alpha=0.5)
+                    ax.set_title("")
+                ax.axvline(row["Stream length"], color="black", ls="dashed", lw=0.7, zorder=0)
+            # for _, E_data in ax_data.groupby(r"$E$"):
+            #     palette = sns.cubehelix_palette(n_colors=81)
+            #     E = E_data[r"$E$"].iloc[0]
+            #     color = palette[E - 20]
+            #     lims = ax.get_ylim()
+                # if np.any(E_data["in-pre-train"]):
+                #     ax.fill_between(E_data["Stream length"], -1, 1, where=E_data["in-pre-train"],
+                #                     color="white", lw=0, zorder=100 - E)
+                #     ax.fill_between(E_data["Stream length"], -1, 1, where=E_data["in-pre-train"],
+                #                     color=color, alpha=0.5, lw=0, zorder=100 - E)
+                #     ax.set_ylim(lims)
+                # else:
+                #     for _, row in E_data[E_data["change-point"]].iterrows():
+                #         ax.axvline(row["Stream length"], color=color, lw=0.5)
 
+    grid._legend.set_title("")
+    for t in grid._legend.texts:
+        t.set_text(f"$\eta = {t.get_text()}$")
+    sns.move_legend(grid, "upper center", ncol=3, title=None, frameon=False)
+    plt.gcf().set_size_inches(6.29921, 8.50394)
+    plt.tight_layout(pad=.1)
+    plt.gcf().subplots_adjust(top=0.93, right=0.99, wspace=0.2, hspace=0.2)
     plt.savefig(os.path.join(os.getcwd(), "..", "figures", ename + ".pdf"))
     plt.show()

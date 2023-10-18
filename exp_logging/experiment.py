@@ -19,7 +19,7 @@ class Experiment:
                  name: str,
                  configurations: dict,
                  datasets: dict,
-                 algorithm_timeout: float = 10 * 60,  # 30 minutes
+                 algorithm_timeout: float = 10 * 60,  # 10 minutes
                  reps: int = 1,
                  condense_results: bool = False):
         self.name = name

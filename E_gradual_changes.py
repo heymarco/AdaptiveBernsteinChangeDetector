@@ -51,6 +51,13 @@ if __name__ == '__main__':
     algorithms = {
         alg: list(ParameterGrid(param_grid=parameter_choices[alg])) for alg in parameter_choices
     }
+    abcd_configs = algorithms[ABCD]
+    abcd_configs = [
+        config for config in abcd_configs
+        if not ((config["update_epochs"] == 20 or config["update_epochs"] == 50)
+                and (config["model_id"] == "kpca" or config["model_id"] == "pca"))
+    ]
+    algorithms[ABCD] = abcd_configs
 
     n_per_concept = 2000
     n_concepts = 10
