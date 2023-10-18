@@ -52,6 +52,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.logger = None
         self.model_id = model_id
         self._new_data = None
+        self.delay = 0
         if model_id == "pca":
             self.model_class = PCAModel
         elif model_id == "kpca":
@@ -97,7 +98,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.seen_elements += 1
         if self.model is None:
             if len(self._new_data) < self.n_min:
-                self._new_data = np.append(self._new_data, [input_value], axis=0)
+                self._new_data = np.append(self._new_data, input_value, axis=0)
             else:
                 self.pre_train(self._new_data)
                 self._new_data = None
@@ -119,7 +120,6 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
 
             self.model = None  # Remove outdated model
             self._new_data = self.window.data_new()
-            self.pre_train(self.window.data_new())  # New model after change
             self.window.reset()  # forget outdated data
 
     def metric(self):
