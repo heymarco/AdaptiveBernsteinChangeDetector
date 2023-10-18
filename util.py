@@ -1,6 +1,7 @@
 import os
 from multiprocess import Pool
 from time import sleep
+import tqdm
 
 import numpy as np
 import pandas as pd
