@@ -96,6 +96,7 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         :return:
         """
         self.seen_elements += 1
+        self.in_concept_change = False
         if self.model is None:
             if len(self._new_data) < self.n_min:
                 self._new_data = np.append(self._new_data, input_value, axis=0)
@@ -107,7 +108,6 @@ class ABCD(RegionalDriftDetector, QuantifiesSeverity):
         self.window.grow(new_tuple)  # add new tuple to window
         self._last_loss = self.window.most_recent_loss()
         self.in_concept_change, detection_point = self.window.has_change()
-        self.logger.track_change_point(self.in_concept_change)
         if self.in_concept_change:
             self._evaluate_subspace()
             self._evaluate_magnitude()

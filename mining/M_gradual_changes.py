@@ -77,6 +77,7 @@ def compare(print_summary: bool,
             #     break
             df = pd.read_csv(os.path.join(last_exp_dir, file), index_col=0, sep=",").convert_dtypes()
             df = fill_df(df)
+            df["ndims"].fillna(0, inplace=True)
             approach = np.unique(df["approach"])[0]
             params = np.unique(df["parameters"])[0]
             dataset = np.unique(df["dataset"])[0]

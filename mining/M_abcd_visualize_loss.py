@@ -4,6 +4,8 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.lines import Line2D
+from matplotlib.text import Text
 from matplotlib.ticker import FormatStrFormatter
 from tqdm import tqdm
 
@@ -49,23 +51,22 @@ if __name__ == '__main__':
         result_df.loc[rep_data.index, r"$\eta$"] = eta
     # result_df[r"$|W|$"] = result_df[r"$|\mathcal{W}|$"]
     # result_df[r"$d$"] = result_df["ndims"].astype(int)
-    result_df = result_df.sort_values(by=[r"$E$"])
     result_df["Approach"] = result_df["approach"]
     result_df["Approach"][result_df["Approach"] == "ABCD0 (pca)"] = "PCA"
     result_df["Approach"][result_df["Approach"] == "ABCD0 (ae)"] = "AE"
     result_df["Approach"][result_df["Approach"] == "ABCD0 (kpca)"] = "KPCA"
     is_ae = result_df["Approach"] == "AE"
     result_df.loc[is_ae, "Approach"] = result_df["Approach"][is_ae] + result_df[r"$E$"][is_ae].apply(lambda x: f", $E={x}$")
-    result_df["order"] = 0
-    for i, (_, gdf) in enumerate(result_df.groupby("Approach")):
-        result_df.loc[gdf.index, "order"] = i
+    result_df.loc[result_df["Approach"] == "KPCA", r"$E$"] = 102  # enforce ordering in plot by setting E to higher values
+    result_df.loc[result_df["Approach"] == "KPCA", r"$E$"] = 101  # same
+    result_df = result_df.sort_values(by=["dataset", r"$E$"])
 
     grid = sns.relplot(
         data=result_df, x="Stream length", y="MSE",
-        col="order", row="dataset", hue=r"$\eta$",
+        col="Approach", row="dataset", hue=r"$\eta$",
         kind="line",
         ci=None,
-        facet_kws={"sharex": "col", "sharey": "row", "legend_out": True},
+        facet_kws={"sharex": "col", "sharey": False, "legend_out": True},
         zorder=100,
         lw=0.5,
     )
@@ -73,13 +74,18 @@ if __name__ == '__main__':
     axes = grid.axes
     for row_index, (row, (_, row_data)) in enumerate(zip(axes, result_df.groupby("dataset"))):
         for col_index, (ax, (_, ax_data)) in enumerate(zip(row, row_data.groupby("Approach"))):
+            title = ax.get_title()
+            left, right = title.split(" | ")
+            dataset = left.split(" = ")[-1]
+            approach = right.split(" = ")[-1]
+            ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+            ax.set_xlabel("", labelpad=10, verticalalignment="bottom")
             if col_index == 0:
-                ylabel_text = ax_data.iloc[0]["dataset"] + "\n" + ax.yaxis.get_label().get_text()
-                ax.set_ylabel(ylabel_text,
-                              multialignment="center")
-            for _, row in ax_data[np.logical_and(ax_data[r"$\eta$"] == 0.5, ax_data["is-change"])].iterrows():
+                ylabel_text = dataset
+                ax.set_ylabel(ylabel_text)
+            for _, row in ax_data[np.logical_and(ax_data[r"$\eta$"] == 0.3, ax_data["is-change"])].iterrows():
                 if row_index == 0:
-                    ax.set_title(ax_data["Approach"].iloc[0])
+                    ax.set_title(approach, pad=16)
                 else:
                     ax.set_title("")
                 ax.axvline(row["Stream length"], color="black", ls="dashed", lw=0.7, zorder=0)
@@ -101,9 +107,18 @@ if __name__ == '__main__':
     grid._legend.set_title("")
     for t in grid._legend.texts:
         t.set_text(f"$\eta = {t.get_text()}$")
-    sns.move_legend(grid, "upper center", ncol=3, title=None, frameon=False)
-    plt.gcf().set_size_inches(6.29921, 8.50394)
-    plt.tight_layout(pad=.1)
-    plt.gcf().subplots_adjust(top=0.93, right=0.99, wspace=0.2, hspace=0.2)
+    handles = grid._legend.legendHandles
+    labels = grid._legend.texts
+    handles.append(Line2D([0], [0], color="black", linewidth=0.7, linestyle="dashed"))
+    labels.append(Text(text="Change point"))
+    grid._legend.remove()
+    grid.add_legend(legend_data={l.get_text(): handle
+                                 for l, handle in zip(labels, handles)})
+    sns.move_legend(grid, "upper center", ncol=4, title=None, frameon=False)
+    plt.gcf().set_size_inches(6.29921, 9)
+    plt.gcf().supxlabel("Stream length")
+    plt.gcf().supylabel("MSE")
+    plt.tight_layout(pad=.2)
+    plt.gcf().subplots_adjust(top=0.915, right=0.99, wspace=0.42, hspace=0.3, bottom=0.06, left=0.12)
     plt.savefig(os.path.join(os.getcwd(), "..", "figures", ename + ".pdf"))
     plt.show()
