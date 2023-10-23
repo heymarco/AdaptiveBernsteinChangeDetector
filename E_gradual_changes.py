@@ -21,31 +21,31 @@ if __name__ == '__main__':
             "bonferroni": [False],
             "split_type": ["ed"]
         },
-        AdwinK: {
-            "k": [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5],
-            "delta": [0.05]
-        },
+        # AdwinK: {
+        #     "k": [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5],
+        #     "delta": [0.05]
+        # },
         D3: {
             "w": [100, 250, 500],
             "roh": [0.1, 0.2, 0.3, 0.4, 0.5],
             "tau": [0.6, 0.7, 0.8, 0.9],
-            "model_id": ["lr", "dt"],
-            "tree_depth": [1]
+            "model_id": ["dt"],
+            "tree_depth": [3, 5]
         },
-        IBDD: {
-            "w": [100, 200, 300],
-            "m": [10, 20, 50, 100]
-        },  # already tuned manually... other values work bad.
-        IncrementalKS: {
-            "w": [100, 200, 500],
-            "delta": [0.05]
-        },
-        WATCH: {
-            "omega": [500, 1000],
-            "kappa": [100],
-            "epsilon": [2, 3],
-            "mu": [1000, 2000],
-        },
+        # IBDD: {
+        #     "w": [100, 200, 300],
+        #     "m": [10, 20, 50, 100]
+        # },  # already tuned manually... other values work bad.
+        # IncrementalKS: {
+        #     "w": [100, 200, 500],
+        #     "delta": [0.05]
+        # },
+        # WATCH: {
+        #     "omega": [500, 1000],
+        #     "kappa": [100],
+        #     "epsilon": [2, 3],
+        #     "mu": [1000, 2000],
+        # },
     }
 
     algorithms = {

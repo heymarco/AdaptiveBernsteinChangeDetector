@@ -13,7 +13,7 @@ ename = "abcd_model_ablation"
 
 if __name__ == '__main__':
     parameter_choices = {
-        JumpingWindowDetector: {
+        JumpingWindowDetector: {  # D3
             "model_id": ["ae", "pca", "kpca"],
             "delta": [0.05],
             "update_epochs": [50],
@@ -21,7 +21,7 @@ if __name__ == '__main__':
             "window_size": [100, 250, 500, 750, 1000],
             "rho": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0]
         },
-        FixedReferenceWindowDetector: {
+        FixedReferenceWindowDetector: {  #  IKS
             "model_id": ["ae", "pca", "kpca"],
             "delta": [0.05],
             "update_epochs": [50],
@@ -30,7 +30,7 @@ if __name__ == '__main__':
             "max_window_size": [1000, 2000],
             "batch_size": [100, 250, 500, 750, 1000]
         },
-        SlidingWindowDetector: {
+        SlidingWindowDetector: {  # WATCH
             "model_id": ["ae", "pca", "kpca"],
             "delta": [0.05],
             "update_epochs": [50],

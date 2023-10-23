@@ -6,12 +6,30 @@ import pandas as pd
 import numpy as np
 
 
-class ExperimentLogger:
+REP = "rep"
+APPROACH = "approach"
+PARAMETERS = "parameters"
+DATASET = "dataset"
+TIME = "time"
+METRIC = "metric"
+PVALUE = "p"
+CHANGEPOINT = "change-point"
+IS_CHANGE = "is-change"
+DELAY = "delay"
+NDIMS = "ndims"
+DIMS_GROUND_TRUTH = "dims-gt"
+DIMS_FOUND = "dims-found"
+DIMS_P_VALUE = "dims-p"
 
+
+_columns = [REP, APPROACH, PARAMETERS, DATASET, TIME, METRIC, PVALUE, CHANGEPOINT,
+            IS_CHANGE, DELAY, NDIMS, DIMS_GROUND_TRUTH, DIMS_FOUND, DIMS_P_VALUE,
+                                  "drift-type", "drift-length", "severity-gt", "severity", "in-pre-train"]
+
+
+class ExperimentLogger:
     def __init__(self,
-                 columns: list = ["rep", "approach", "parameters", "dataset", "time", "metric", "p", "change-point",
-                                  "is-change", "delay", "ndims", "dims-gt", "dims-found", "dims-p",
-                                  "drift-type", "drift-length", "severity-gt", "severity", "in-pre-train"]):
+                 columns: list = _columns):
         self._data = []
         self._columns = columns
         self._current_row = [np.nan for _ in range(len(self._columns))]

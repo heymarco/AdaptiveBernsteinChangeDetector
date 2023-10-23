@@ -70,11 +70,13 @@ class Experiment:
                 dfs.append(self.evaluate_algorithm(alg, stream, rep=rep, warm_start=warm_start))
         df = pd.concat(dfs, axis=0, ignore_index=True)
         if self.condense_results:
-            empty_rep = df["rep"].isna() == False
-            empty_is_change = df["is-change"].isna() == False
+            non_empty_dims = df["ndims"].isna() == False
+            non_empty_rep = df["rep"].isna() == False
+            non_empty_is_change = df["is-change"].isna() == False
             is_change_point = df["change-point"] == True
-            bool_arr = np.logical_or(empty_rep, empty_is_change)
+            bool_arr = np.logical_or(non_empty_rep, non_empty_is_change)
             bool_arr = np.logical_or(bool_arr, is_change_point)
+            bool_arr = np.logical_and(bool_arr, non_empty_dims)
             df = df.loc[bool_arr]
         df.to_csv(new_filepath_in_experiment_with_name(self.name), index=True)
 

@@ -25,7 +25,7 @@ def p_chernoff(eps, sigma1, sigma2):
     return 2 * np.exp(exponent)
 
 
-def p_bernstein(eps, n1, n2, sigma1, sigma2, abs_max: float = 0.1):
+def p_bernstein(eps, n1, n2, sigma1, sigma2, abs_max: float = 0.3):
     k = n2 / (n1 + n2)
 
     def exponent(eps, n, sigma, k, M):

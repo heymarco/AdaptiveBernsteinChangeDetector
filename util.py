@@ -120,7 +120,7 @@ def fill_df(df: pd.DataFrame) -> pd.DataFrame:
     df.fillna(value={"is-change": False,
                      "change-point": False,
                      "in-pre-train": False,
-                     "severity": 0.0  # changes that were not detected are of 0 severity
+                     "severity": 0.0,  # changes that were not detected are of 0 severity
                      }, inplace=True)
     df.ffill(inplace=True)
     # df.bfill(inplace=True)
