@@ -76,7 +76,7 @@ class Experiment:
             is_change_point = df["change-point"] == True
             bool_arr = np.logical_or(non_empty_rep, non_empty_is_change)
             bool_arr = np.logical_or(bool_arr, is_change_point)
-            bool_arr = np.logical_and(bool_arr, non_empty_dims)
+            bool_arr = np.logical_or(bool_arr, non_empty_dims)
             df = df.loc[bool_arr]
         df.to_csv(new_filepath_in_experiment_with_name(self.name), index=True)
 
