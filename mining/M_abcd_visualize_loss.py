@@ -27,13 +27,12 @@ if __name__ == '__main__':
     j = 0
     for file in tqdm(all_files):
         j += 1
-        # if j > 10:
-        #     break
         df = pd.read_csv(os.path.join(last_exp_dir, file), sep=",", index_col=0).convert_dtypes()
         df = fill_df(df)
-        df["metric"] = df["metric"].rolling(30).mean()
+        df = df[df["in-pre-train"] == False]
+        df["metric"] = df["metric"][::-1].rolling(50).mean()[::-1]  # set the value at the left edge of the rolling window
         df["Stream length"] = np.arange(len(df))
-        df = df[df.index < 5500]
+        df = df[np.logical_and(df.index >= 1000, df.index < 5000)]
         result_df.append(df)
     result_df = pd.concat(result_df, ignore_index=True)
     result_df[r"$|\mathcal{W}|$"] = np.nan
@@ -41,7 +40,7 @@ if __name__ == '__main__':
     result_df["MTPO"] = np.nan
     result_df[r"$k_{max}$"] = ""
     result_df[r"$t$"] = np.nan
-    result_df[r"$E$"] = 0
+    result_df[r"$E$"] = np.nan
     result_df = result_df.rename({"metric": "MSE"}, axis=1)
     for (rep, ndims, approach, params), rep_data in tqdm(
         result_df.groupby(["rep", "ndims", "approach", "parameters"])):
@@ -49,8 +48,6 @@ if __name__ == '__main__':
         n_splits = get_abcd_hyperparameters_from_str(params)[-1]
         result_df.loc[rep_data.index, r"$E$"] = E
         result_df.loc[rep_data.index, r"$\eta$"] = eta
-    # result_df[r"$|W|$"] = result_df[r"$|\mathcal{W}|$"]
-    # result_df[r"$d$"] = result_df["ndims"].astype(int)
     result_df["Approach"] = result_df["approach"]
     result_df["Approach"][result_df["Approach"] == "ABCD0 (pca)"] = "PCA"
     result_df["Approach"][result_df["Approach"] == "ABCD0 (ae)"] = "AE"
@@ -115,10 +112,10 @@ if __name__ == '__main__':
     grid.add_legend(legend_data={l.get_text(): handle
                                  for l, handle in zip(labels, handles)})
     sns.move_legend(grid, "upper center", ncol=4, title=None, frameon=False)
-    plt.gcf().set_size_inches(6.29921, 9)
+    plt.gcf().set_size_inches(6.29921, 7)
     plt.gcf().supxlabel("Stream length")
     plt.gcf().supylabel("MSE")
     plt.tight_layout(pad=.2)
-    plt.gcf().subplots_adjust(top=0.915, right=0.99, wspace=0.42, hspace=0.3, bottom=0.06, left=0.12)
+    plt.gcf().subplots_adjust(top=0.89, right=0.97, wspace=0.35, hspace=0.44, bottom=0.08, left=0.12)
     plt.savefig(os.path.join(os.getcwd(), "..", "figures", ename + ".pdf"))
     plt.show()
