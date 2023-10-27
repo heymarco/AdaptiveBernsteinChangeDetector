@@ -31,7 +31,7 @@ if __name__ == '__main__':
             "roh": [0.1, 0.2, 0.3, 0.4, 0.5],
             "tau": [0.6, 0.7, 0.8, 0.9],
             "model_id": ["lr", "dt"],
-            "tree_depth": [1]
+            "tree_depth": [1, 3, 5]
         },
         IBDD: {
             "w": [100, 200, 300],
@@ -59,6 +59,13 @@ if __name__ == '__main__':
                 and (config["model_id"] == "kpca" or config["model_id"] == "pca"))
     ]
     algorithms[ABCD] = abcd_configs
+
+    d3_configs = algorithms[D3]
+    d3_configs = [
+        config for config in d3_configs
+        if not ((config["tree_depth"] == 3 or config["tree_depth"] == 5) and (config["model_id"] == "lr"))
+    ]
+    algorithms[D3] = d3_configs
 
     n_per_concept = 2000
     num_concepts = 10
