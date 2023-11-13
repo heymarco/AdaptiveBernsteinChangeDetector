@@ -65,6 +65,7 @@ class Experiment:
         else:
             dfs = []
             for rep in range(self.reps):
+                data_config["seed"] = rep
                 stream = data_class(**data_config)
                 alg = detector[0](**detector[1])
                 dfs.append(self.evaluate_algorithm(alg, stream, rep=rep, warm_start=warm_start))
