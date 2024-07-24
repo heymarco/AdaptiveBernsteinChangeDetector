@@ -123,7 +123,7 @@ def fill_df(df: pd.DataFrame) -> pd.DataFrame:
                      "severity": 0.0,  # changes that were not detected are of 0 severity
                      }, inplace=True)
     df.ffill(inplace=True)
-    # df.bfill(inplace=True)
+    df["ndims"].fillna(value=df["ndims"].mode(dropna=True), inplace=True)
     return df
 
 

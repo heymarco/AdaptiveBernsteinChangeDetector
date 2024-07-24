@@ -55,9 +55,9 @@ def add_params_to_df(row):
 
 
 def create_boxplots_for_approaches(result_df):
-    result_df = result_df[np.logical_and(
-        result_df["Approach"] == "D3", result_df["Parameters"].apply(lambda x: "dt" in x)
-    ) == False]
+    # result_df = result_df[np.logical_and(
+    #     result_df["Approach"] == "D3", result_df["Parameters"].apply(lambda x: "dt" in x)
+    # ) == False]
     result_df = result_df.groupby(["Approach", "Parameters", "Dataset"]).mean().reset_index()
     mean = result_df.groupby(["Approach", "Parameters", "Dataset"]).mean().reset_index()
     mean["Dataset"] = "Average"
@@ -101,6 +101,7 @@ def create_boxplots_for_approaches(result_df):
     plt.subplots_adjust(wspace=0.05)
     plt.savefig(os.path.join("..", "figures", "evaluation_gradual_changes.pdf"))
     plt.show()
+
     g = sns.catplot(data=melted_df[melted_df["Approach"] != "Average"],
                     x="Approach", y="Value", row="Metric", kind="box",
                     linewidth=0.7, showfliers=False, sharey="row",
@@ -289,8 +290,8 @@ def filter_best(df, add_mean: bool = True):
 
 if __name__ == '__main__':
     print_summary = True
-    plot_E_sensitivity_study = False
-    plot_eta_sensitivity_study = False
+    plot_E_sensitivity_study = True
+    plot_eta_sensitivity_study = True
     plot_gradual_changes_comparison = True
 
     sort_by = ["Dims", "Dataset", "Approach", "Parameters"]

@@ -34,7 +34,7 @@ def add_mean_column(df: pd.DataFrame):
 
 def compute_region_metrics(df: pd.DataFrame, thresh: float = 2.2):
     if not np.any(pd.isnull(df["dims-found"]) == False):
-        return np.nan, np.nan, np.nan, np.nan
+        return np.nan, np.nan, np.nan
     changes = df["change-point"]
     idxs = [i for i, change in enumerate(changes) if change]
     regions_gt = df["dims-gt"].iloc[idxs]
@@ -118,15 +118,16 @@ if __name__ == '__main__':
             params = np.unique(df["parameters"])[0]
             dataset = np.unique(df["dataset"])[0]
             dims = np.unique(df["ndims"])[0]
-            severity, weight = compute_severity_metric(df)
+            # if not "(pca)" in approach:
+            #     continue
             if "ABCD" in approach or "ABCD0" in approach:
                 parsed_params = get_abcd_hyperparameters_from_str(params)
                 E, eta = parsed_params[1], parsed_params[2]
             else:
                 E = np.nan
                 eta = np.nan
-            result_df.append([np.nan, dataset, dims, approach, params, E, eta,
-                              np.nan, np.nan, np.nan, np.nan, severity, weight, np.nan])
+            # result_df.append([np.nan, dataset, dims, approach, params, E, eta,
+            #                   np.nan, np.nan, np.nan, np.nan, severity, weight, np.nan])
             for rep, rep_data in df.groupby("rep"):
                 true_cps = [i for i in rep_data.index if rep_data["is-change"].loc[i]]  # TODO: check if this is correct
                 cp_distance = 2000
@@ -140,18 +141,19 @@ if __name__ == '__main__':
                 rec = recall(tp, fp, fn)
                 f1 = fb_score(true_cps, reported_cps, T=cp_distance)
                 region_prec, region_rec, acc = compute_region_metrics(rep_data, thresh=2.5)
+                severity, weight = compute_severity_metric(rep_data)
                 f1_region = 2 * (region_rec * region_prec) / (region_rec + region_prec)
                 result_df.append([
-                    rep, dataset, dims, approach, params, E, eta, f1_region, region_prec, region_rec, np.nan, np.nan,
+                    rep, dataset, dims, approach, params, E, eta, f1_region, region_prec, region_rec, severity, weight,
                     f1, acc
                 ])
         result_df = pd.DataFrame(result_df, columns=["Rep", "Dataset", "Dims", "Approach", "Parameters", "E", "eta",
                                                      "F1 (Subspace)", "Prec. (Region)",
                                                      "Rec. (Region)", r"Spearman $\rho$", "Weight", "F1", "SAcc."])
         result_df.to_csv(os.path.join(cache_dir, "cached.csv"), mode="w+", index=False)
-    # if "Pearson R" in result_df.columns:
-    #     result_df.rename({r"Spearman $\rho$": r"Spearman $\rho$"}, axis=1, inplace=True)
-    #     result_df.to_csv(os.path.join(cache_dir, "cached.csv"), mode="w+", index=False)
+    if "Pearson R" in result_df.columns:
+        result_df.rename({r"Spearman $\rho$": r"Spearman $\rho$"}, axis=1, inplace=True)
+        result_df.to_csv(os.path.join(cache_dir, "cached.csv"), mode="w+", index=False)
     result_df = result_df[result_df["Dataset"] != "RBF"]
     for _, gdf in result_df.groupby(["Approach", "Dataset", "Dims"]):
         index = gdf.index
@@ -160,6 +162,7 @@ if __name__ == '__main__':
     result_df = result_df.groupby(["Dataset", "Approach", "Parameters", "Dims"]).mean().reset_index()
     sort_by = ["Dataset", "Dims", "Approach"]
     result_df = result_df.sort_values(by=sort_by)
+    print(np.all(np.isnan(result_df[r"Spearman $\rho$"])))
     result_df["F1 (Subspace)"][result_df["F1 (Subspace)"].isna()] = 0
     result_df[r"Spearman $\rho$"][result_df[r"Spearman $\rho$"].isna()] = 0
     result_df["SAcc."][result_df["SAcc."].isna()] = 0
@@ -208,6 +211,8 @@ if __name__ == '__main__':
             ax.set_ylabel("SAcc.")
         if i == 8:
             ax.set_ylabel(r"Spearman $\rho$")
+        if i >= 8:
+            ax.set_ylim(bottom=-0.3, top=0.8)
         if i < 4:
             col_title = ax.get_title().split(" = ")[-1]
             if col_title.startswith("Normal"):
@@ -222,6 +227,7 @@ if __name__ == '__main__':
     plt.savefig(os.path.join("..", "figures", "evaluation_drift_region.pdf"))
     plt.show()
 
+    melted_df = melted_df[melted_df["Metric"] != "F1"]
     g = sns.catplot(data=melted_df[melted_df["Approach"] != "Average"],
                     x="Approach", y="Value", row="Metric", kind="box",
                     linewidth=0.7, fliersize=2, sharey="row", showfliers=False,
@@ -237,10 +243,12 @@ if __name__ == '__main__':
             a, b = col_title.split("al")
             col_title = a + "." + b
         if col_title == r"Spearman $\rho$":
-            col_title = r"Spearman $\rho$"
+            col_title = r"Spearman correlation with change severity"
+        if col_title == "SAcc.":
+            col_title = "Accuracy at detecting change subspace"
         ax.set_title(col_title)
     plt.xticks(rotation=25, ha='right')
-    plt.gcf().set_size_inches(3.3, 3.3)
+    plt.gcf().set_size_inches(3.3, 2.3)
     plt.tight_layout(pad=.5)
     plt.subplots_adjust(left=0.15, wspace=0.1, hspace=0.5, right=0.98)
     plt.savefig(os.path.join("..", "figures", "evaluation_drift_region_presentation.pdf"))
@@ -284,7 +292,7 @@ if __name__ == '__main__':
             ax.set_title("")
             ax.axhline(0.25, lw=0.7, ls="--", color="gray", zorder=0)
             ax.axhline(.5, lw=0.7, ls="--", color="gray", zorder=0)
-            ax.set_ylim(bottom=0.0 if i < 5 else 0)
+            ax.set_ylim(bottom=0.0 if i < 5 else 0, top=0.7)
     plt.tight_layout(pad=0.5)
     plt.savefig(os.path.join(os.getcwd(), "..", "figures", "sensitivity-study-eta-region-severity.pdf"))
     plt.show()
