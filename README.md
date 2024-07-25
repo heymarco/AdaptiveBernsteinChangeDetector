@@ -7,7 +7,8 @@ Change detection is of fundamental importance when analyzing data streams. Detec
 
 In high-dimensional data, change detectors should not only be able to identify when changes happen, but also in which subspace they occur. Ideally, one should also quantify how severe they are. Our approach, ABCD, has these properties. ABCD learns an encoder-decoder model and monitors its accuracy over a window of adaptive size. ABCD derives a change score based on Bernstein’s inequality to detect deviations in terms of accuracy, which indicate changes.
 
-Our experiments demonstrate that ABCD outperforms its best competitor by at least 5% and up to 20% in F1-score on average. It can also accurately estimate changes’ subspace, together with a severity measure that correlates with the ground truth.
+Our experiments demonstrate that ABCD outperforms its best competitor by up to 20 % in F1-score on average. It can also accurately estimate changes' subspace, together with a severity measure
+that correlates with the ground truth.
 
 ## Installation of dependencies
 
